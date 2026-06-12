@@ -7,6 +7,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.DividerItemDecoration
@@ -35,6 +36,18 @@ class FileBrowserActivity : AppCompatActivity() {
 
         val ble = (application as FlySightApp).bleManager
 
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (pathStack.size > 1) {
+                    pathStack.removeLast()
+                    loadDirectory(ble)
+                } else {
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                }
+            }
+        })
+
         fileAdapter = FileListAdapter { entry ->
             val entryPath = if (currentPath.isEmpty()) entry.name else "$currentPath/${entry.name}"
             when {
@@ -49,6 +62,7 @@ class FileBrowserActivity : AppCompatActivity() {
                     startActivity(Intent(this, FileViewActivity::class.java).apply {
                         putExtra(FileViewActivity.EXTRA_NAME, entry.name)
                         putExtra(FileViewActivity.EXTRA_PATH, entryPath)
+                        putExtra(FileViewActivity.EXTRA_SIZE, entry.size)
                     })
                 }
             }
@@ -82,16 +96,6 @@ class FileBrowserActivity : AppCompatActivity() {
         loadDirectory(ble)
     }
 
-    @Suppress("OVERRIDE_DEPRECATION")
-    override fun onBackPressed() {
-        if (pathStack.size > 1) {
-            pathStack.removeLast()
-            loadDirectory((application as FlySightApp).bleManager)
-        } else {
-            super.onBackPressed()
-        }
-    }
-
     private fun loadDirectory(ble: com.flysight.app.ble.BleManager) {
         binding.tvPath.text = if (currentPath.isEmpty()) "/" else "/$currentPath"
         binding.btnBack.visibility = if (pathStack.size > 1) View.VISIBLE else View.GONE
@@ -100,7 +104,27 @@ class FileBrowserActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             try {
-                val entries = ble.listDir(currentPath)
+                val all = ble.listDir(currentPath)
+
+                // If this folder contains TRACK.CSV, open it directly and don't list the folder
+                val trackCsv = all.firstOrNull { it.name.equals("TRACK.CSV", ignoreCase = true) }
+                if (trackCsv != null) {
+                    val trackPath = if (currentPath.isEmpty()) trackCsv.name
+                                    else "$currentPath/${trackCsv.name}"
+                    pathStack.removeLast()   // don't keep this dir in the back-stack
+                    setLoading(false)
+                    startActivity(Intent(this@FileBrowserActivity, FileViewActivity::class.java).apply {
+                        putExtra(FileViewActivity.EXTRA_NAME, trackCsv.name)
+                        putExtra(FileViewActivity.EXTRA_PATH, trackPath)
+                        putExtra(FileViewActivity.EXTRA_SIZE, trackCsv.size)
+                    })
+                    return@launch
+                }
+
+                val entries = all.filter { entry ->
+                    entry.isDirectory ||
+                    entry.name.equals("CONFIG.TXT", ignoreCase = true)
+                }
                 fileAdapter.update(entries)
                 binding.tvEmpty.visibility = if (entries.isEmpty()) View.VISIBLE else View.GONE
             } catch (e: Exception) {

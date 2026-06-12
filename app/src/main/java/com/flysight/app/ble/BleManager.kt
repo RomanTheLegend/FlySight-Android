@@ -45,7 +45,7 @@ class BleManager(private val context: Context) {
         private const val TAG = "FlySightBle"
         private const val PING_INTERVAL_MS   = 15_000L
         private const val OP_TIMEOUT_MS      = 5_000L
-        private const val XFER_TIMEOUT_MS    = 30_000L
+        private const val XFER_TIMEOUT_MS    = 180_000L
         private const val LIST_TIMEOUT_MS    = 120_000L
         private const val CONNECT_TIMEOUT_MS = 15_000L
     }
@@ -108,7 +108,7 @@ class BleManager(private val context: Context) {
             servicesCh.trySend(status == BluetoothGatt.GATT_SUCCESS)
         }
 
-        @Suppress("DEPRECATION")
+        @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
         override fun onCharacteristicChanged(
             g: BluetoothGatt,
             c: BluetoothGattCharacteristic
@@ -297,16 +297,24 @@ class BleManager(private val context: Context) {
 
     // ── File operations ───────────────────────────────────────────────────────
 
-    suspend fun readFile(path: String): ByteArray {
+    suspend fun readFile(
+        path: String,
+        totalBytes: Long = 0L,
+        onProgress: ((bytesReceived: Long, totalBytes: Long) -> Unit)? = null
+    ): ByteArray {
         pingJob?.cancel()
         return try {
-            doRead(path)
+            doRead(path, totalBytes, onProgress)
         } finally {
             if (gatt != null) startPing()
         }
     }
 
-    private suspend fun doRead(path: String): ByteArray {
+    private suspend fun doRead(
+        path: String,
+        totalBytes: Long,
+        onProgress: ((bytesReceived: Long, totalBytes: Long) -> Unit)?
+    ): ByteArray {
         val pathBytes = path.toByteArray(Charsets.UTF_8)
         // Command: 0x02 + offset_mult(u32 LE) + stride-1_mult(u32 LE) + path + null
         val cmd = ByteBuffer.allocate(1 + 4 + 4 + pathBytes.size + 1)
@@ -324,6 +332,7 @@ class BleManager(private val context: Context) {
 
         val buf = ByteArrayOutputStream()
         var expected = 0
+        var received = 0L
 
         try {
             while (true) {
@@ -335,6 +344,8 @@ class BleManager(private val context: Context) {
                     rawWrite(byteArrayOf(FtOpcode.ACK_DATA, counter.toByte()))
                     if (data.isEmpty()) break  // EOF marker
                     buf.write(data)
+                    received += data.size
+                    onProgress?.invoke(received, totalBytes)
                     expected = (expected + 1) and 0xFF
                 }
                 // Ignore out-of-order packets — device retransmits after 200 ms
