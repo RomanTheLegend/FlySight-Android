@@ -278,14 +278,14 @@ class FileListAdapter(
                 entry.name.equals("TEMP",  ignoreCase = true) -> "⏱"
                 else -> "📁"
             }
-            holder.tvName.setTextColor(0xFF111111.toInt())
+            holder.tvName.setTextColor(androidx.core.content.ContextCompat.getColor(holder.itemView.context, R.color.colorTextPrimary))
         } else {
             holder.tvChevron.visibility = View.GONE
             holder.tvMeta.text          = formatSize(entry.size)
             holder.tvMeta.visibility    = View.VISIBLE
             holder.iconBg.setBackgroundResource(R.drawable.bg_icon_file)
             holder.tvIcon.text = "⚙"
-            holder.tvName.setTextColor(0xFF111111.toInt())
+            holder.tvName.setTextColor(androidx.core.content.ContextCompat.getColor(holder.itemView.context, R.color.colorTextPrimary))
         }
         holder.itemView.setOnClickListener { onClick(entry) }
         if (entry.isDirectory && onLongClick != null) {

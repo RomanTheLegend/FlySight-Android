@@ -32,7 +32,7 @@
                 android:layout_gravity="center"
                 android:text="←"
                 android:textSize="16sp"
-                android:textColor="#333333" />
+                android:textColor="@color/colorIconText" />
 
         </FrameLayout>
 
@@ -48,14 +48,14 @@
                 android:layout_height="wrap_content"
                 android:textSize="20sp"
                 android:textStyle="bold"
-                android:textColor="#111111" />
+                android:textColor="@color/colorTextPrimary" />
 
             <TextView
                 android:id="@+id/tvSubtitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="13sp"
-                android:textColor="#888888" />
+                android:textColor="@color/colorTextSecondary" />
 
         </LinearLayout>
 
@@ -79,7 +79,7 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
             android:textSize="14sp"
-            android:textColor="#555555" />
+            android:textColor="@color/colorSettingLabel" />
 
         <ProgressBar
             android:id="@+id/progressBar"
@@ -94,7 +94,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:textSize="12sp"
-            android:textColor="#888888"
+            android:textColor="@color/colorTextSecondary"
             android:visibility="gone" />
 
     </LinearLayout>
@@ -154,7 +154,7 @@
                     android:text="ELEVATION"
                     android:textSize="10sp"
                     android:textAllCaps="true"
-                    android:textColor="#999999"
+                    android:textColor="@color/colorTextTertiary"
                     android:letterSpacing="0.05" />
                 <TextView
                     android:id="@+id/tvElevValue"
@@ -169,7 +169,7 @@
                     android:layout_height="wrap_content"
                     android:text="m"
                     android:textSize="11sp"
-                    android:textColor="#999999" />
+                    android:textColor="@color/colorTextTertiary" />
             </LinearLayout>
 
             <LinearLayout
@@ -184,7 +184,7 @@
                     android:text="H. SPEED"
                     android:textSize="10sp"
                     android:textAllCaps="true"
-                    android:textColor="#999999"
+                    android:textColor="@color/colorTextTertiary"
                     android:letterSpacing="0.05" />
                 <TextView
                     android:id="@+id/tvHSpeedValue"
@@ -199,7 +199,7 @@
                     android:layout_height="wrap_content"
                     android:text="km/h"
                     android:textSize="11sp"
-                    android:textColor="#999999" />
+                    android:textColor="@color/colorTextTertiary" />
             </LinearLayout>
 
             <LinearLayout
@@ -214,7 +214,7 @@
                     android:text="V. SPEED"
                     android:textSize="10sp"
                     android:textAllCaps="true"
-                    android:textColor="#999999"
+                    android:textColor="@color/colorTextTertiary"
                     android:letterSpacing="0.05" />
                 <TextView
                     android:id="@+id/tvVSpeedValue"
@@ -229,7 +229,7 @@
                     android:layout_height="wrap_content"
                     android:text="km/h"
                     android:textSize="11sp"
-                    android:textColor="#999999" />
+                    android:textColor="@color/colorTextTertiary" />
             </LinearLayout>
 
             <LinearLayout
@@ -244,7 +244,7 @@
                     android:text="TOTAL SPEED"
                     android:textSize="10sp"
                     android:textAllCaps="true"
-                    android:textColor="#999999"
+                    android:textColor="@color/colorTextTertiary"
                     android:letterSpacing="0.05" />
                 <TextView
                     android:id="@+id/tvTotalValue"
@@ -259,7 +259,7 @@
                     android:layout_height="wrap_content"
                     android:text="km/h"
                     android:textSize="11sp"
-                    android:textColor="#999999" />
+                    android:textColor="@color/colorTextTertiary" />
             </LinearLayout>
 
         </LinearLayout>

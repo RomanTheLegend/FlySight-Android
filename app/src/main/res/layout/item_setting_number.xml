@@ -15,7 +15,7 @@
         android:layout_height="wrap_content"
         android:layout_weight="1"
         android:textSize="15sp"
-        android:textColor="#333333" />
+        android:textColor="@color/colorSettingLabel" />
 
     <EditText
         android:id="@+id/etValue"
@@ -34,7 +34,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textSize="11sp"
-        android:textColor="#AAAAAA"
+        android:textColor="@color/colorTextTertiary"
         android:layout_marginStart="4dp"
         android:minWidth="32dp" />
 

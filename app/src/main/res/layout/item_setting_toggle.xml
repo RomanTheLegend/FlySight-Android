@@ -18,7 +18,7 @@
         android:layout_height="wrap_content"
         android:layout_weight="1"
         android:textSize="15sp"
-        android:textColor="#333333" />
+        android:textColor="@color/colorSettingLabel" />
 
     <androidx.appcompat.widget.SwitchCompat
         android:id="@+id/switchToggle"

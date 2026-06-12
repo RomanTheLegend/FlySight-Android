@@ -1,5 +1,6 @@
 package com.flysight.app
 
+import android.content.res.Configuration
 import android.graphics.Color
 import android.os.Bundle
 import android.view.MotionEvent
@@ -190,7 +191,13 @@ class FileViewActivity : AppCompatActivity() {
                 mode = LineDataSet.Mode.LINEAR
             }
 
+        val isDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
+                Configuration.UI_MODE_NIGHT_YES
+        val axisTextColor = if (isDark) Color.parseColor("#AAAAAA") else Color.DKGRAY
+        val gridColor     = if (isDark) Color.parseColor("#33FFFFFF") else Color.parseColor("#22000000")
+
         val chart = binding.lineChart
+        chart.setBackgroundColor(Color.TRANSPARENT)
         chart.data = LineData(
             set(hSpdE, "H. Speed (km/h)",   colorHSpeed, YAxis.AxisDependency.LEFT),
             set(vSpdE, "V. Speed (km/h)",   colorVSpeed, YAxis.AxisDependency.LEFT),
@@ -203,7 +210,7 @@ class FileViewActivity : AppCompatActivity() {
             position = XAxis.XAxisPosition.BOTTOM
             setDrawGridLines(false)
             granularity = 10f
-            textColor = Color.DKGRAY
+            textColor = axisTextColor
             valueFormatter = object : ValueFormatter() {
                 override fun getFormattedValue(value: Float) = "${value.toInt()}s"
             }
@@ -212,9 +219,9 @@ class FileViewActivity : AppCompatActivity() {
         // Left axis: km/h (speeds)
         chart.axisLeft.apply {
             setDrawGridLines(true)
-            textColor = Color.DKGRAY
-            axisLineColor = Color.DKGRAY
-            gridColor = Color.parseColor("#22000000")
+            textColor = axisTextColor
+            axisLineColor = axisTextColor
+            this.gridColor = gridColor
         }
 
         // Right axis: elevation in meters, orange to match series
@@ -233,7 +240,7 @@ class FileViewActivity : AppCompatActivity() {
             setDrawInside(false)
             yOffset = 8f
             textSize = 11f
-            textColor = Color.DKGRAY
+            textColor = axisTextColor
         }
 
         chart.description.isEnabled = false

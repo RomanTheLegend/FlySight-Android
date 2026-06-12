@@ -32,7 +32,7 @@
                 android:layout_gravity="center"
                 android:text="←"
                 android:textSize="16sp"
-                android:textColor="#333333" />
+                android:textColor="@color/colorIconText" />
 
         </FrameLayout>
 
@@ -48,7 +48,7 @@
                 android:text="Files"
                 android:textSize="22sp"
                 android:textStyle="bold"
-                android:textColor="#111111" />
+                android:textColor="@color/colorTextPrimary" />
 
             <TextView
                 android:id="@+id/tvPath"
@@ -56,7 +56,7 @@
                 android:layout_height="wrap_content"
                 android:text="/ root"
                 android:textSize="13sp"
-                android:textColor="#888888"
+                android:textColor="@color/colorTextSecondary"
                 android:ellipsize="start"
                 android:singleLine="true" />
 
@@ -101,7 +101,7 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
                 android:text="Empty folder"
-                android:textColor="#AAAAAA"
+                android:textColor="@color/colorEmptyState"
                 android:textSize="15sp"
                 android:visibility="gone" />
 

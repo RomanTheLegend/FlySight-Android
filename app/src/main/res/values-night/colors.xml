@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand — lighter for dark backgrounds -->
+    <color name="colorPrimary">#5B8DEF</color>
+    <color name="colorPrimaryDark">#3A6ED4</color>
+    <color name="colorGreen">#4DB6AC</color>
+    <color name="colorDisconnect">#EF5350</color>
+
+    <!-- Surfaces -->
+    <color name="colorBackground">#1A1A1A</color>
+    <color name="colorSurface">#252525</color>
+
+    <!-- Text -->
+    <color name="colorTextPrimary">#E8E8E8</color>
+    <color name="colorTextSecondary">#909090</color>
+    <color name="colorTextTertiary">#666666</color>
+    <color name="colorSettingLabel">#BEBEBE</color>
+    <color name="colorIconText">#D0D0D0</color>
+    <color name="colorEmptyState">#555555</color>
+    <color name="colorChevron">#555555</color>
+
+    <!-- UI element backgrounds -->
+    <color name="colorBackBtn">#3A3A3A</color>
+    <color name="colorIconFolderBg">#2C2508</color>
+    <color name="colorIconFileBg">#0A1C2A</color>
+    <color name="colorChipBg">#0D1A40</color>
+    <color name="colorDisconnectBg">#2A0808</color>
+</resources>

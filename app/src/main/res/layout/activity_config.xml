@@ -32,7 +32,7 @@
                 android:layout_gravity="center"
                 android:text="←"
                 android:textSize="16sp"
-                android:textColor="#333333" />
+                android:textColor="@color/colorIconText" />
 
         </FrameLayout>
 
@@ -48,7 +48,7 @@
                 android:text="FlySight Config"
                 android:textSize="20sp"
                 android:textStyle="bold"
-                android:textColor="#111111" />
+                android:textColor="@color/colorTextPrimary" />
 
             <TextView
                 android:id="@+id/tvStatus"
@@ -56,7 +56,7 @@
                 android:layout_height="wrap_content"
                 android:text="No settings loaded"
                 android:textSize="13sp"
-                android:textColor="#888888" />
+                android:textColor="@color/colorTextSecondary" />
 
         </LinearLayout>
 
@@ -137,7 +137,7 @@
                     android:layout_gravity="center"
                     android:text="⚙"
                     android:textSize="36sp"
-                    android:textColor="#90A4AE" />
+                    android:textColor="@color/colorEmptyState" />
             </FrameLayout>
 
             <TextView
@@ -146,7 +146,7 @@
                 android:text="No Settings Loaded"
                 android:textSize="18sp"
                 android:textStyle="bold"
-                android:textColor="#333333"
+                android:textColor="@color/colorSettingLabel"
                 android:layout_marginBottom="8dp" />
 
             <TextView
@@ -154,7 +154,7 @@
                 android:layout_height="wrap_content"
                 android:text="Tap READ to load the current configuration from your FlySight device."
                 android:textSize="13sp"
-                android:textColor="#999999"
+                android:textColor="@color/colorTextTertiary"
                 android:gravity="center" />
 
         </LinearLayout>

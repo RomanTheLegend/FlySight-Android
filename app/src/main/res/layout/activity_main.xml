@@ -22,18 +22,17 @@
             android:text="FlySight 2"
             android:textSize="28sp"
             android:textStyle="bold"
-            android:textColor="#111111" />
+            android:textColor="@color/colorTextPrimary" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Device Manager"
             android:textSize="14sp"
-            android:textColor="#888888" />
+            android:textColor="@color/colorTextSecondary" />
 
     </LinearLayout>
 
-    <!-- Scrollable content -->
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -45,14 +44,13 @@
             android:orientation="vertical"
             android:paddingBottom="24dp">
 
-            <!-- MY DEVICES -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="MY DEVICES"
                 android:textSize="11sp"
                 android:textStyle="bold"
-                android:textColor="#888888"
+                android:textColor="@color/colorTextSecondary"
                 android:letterSpacing="0.1"
                 android:paddingStart="20dp"
                 android:paddingEnd="20dp"
@@ -84,7 +82,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="No paired devices. Connect to a FlySight 2 to add it here."
-                        android:textColor="#999999"
+                        android:textColor="@color/colorTextTertiary"
                         android:textSize="13sp"
                         android:padding="16dp"
                         android:visibility="visible" />
@@ -93,14 +91,13 @@
 
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- ADD NEW DEVICE -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="ADD NEW DEVICE"
                 android:textSize="11sp"
                 android:textStyle="bold"
-                android:textColor="#888888"
+                android:textColor="@color/colorTextSecondary"
                 android:letterSpacing="0.1"
                 android:paddingStart="20dp"
                 android:paddingEnd="20dp"
@@ -128,7 +125,7 @@
                         android:layout_height="wrap_content"
                         android:text="Turn off your FlySight and press the Power button twice to enter pairing mode. The green LED will start pulsing."
                         android:textSize="13sp"
-                        android:textColor="#888888"
+                        android:textColor="@color/colorTextSecondary"
                         android:paddingBottom="14dp" />
 
                     <Button
@@ -153,7 +150,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="No FlySight 2 devices found.\nMake sure the device is powered on."
-                        android:textColor="#888888"
+                        android:textColor="@color/colorTextSecondary"
                         android:gravity="center"
                         android:paddingTop="8dp"
                         android:visibility="gone" />

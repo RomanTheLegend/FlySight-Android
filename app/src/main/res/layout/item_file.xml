@@ -12,7 +12,6 @@
     android:clickable="true"
     android:focusable="true">
 
-    <!-- Icon -->
     <FrameLayout
         android:id="@+id/iconBg"
         android:layout_width="40dp"
@@ -28,7 +27,6 @@
 
     </FrameLayout>
 
-    <!-- Name -->
     <TextView
         android:id="@+id/tvName"
         android:layout_width="0dp"
@@ -36,28 +34,26 @@
         android:layout_weight="1"
         android:textSize="15sp"
         android:textStyle="bold"
-        android:textColor="#111111"
+        android:textColor="@color/colorTextPrimary"
         android:ellipsize="end"
         android:singleLine="true" />
 
-    <!-- File size (files only) -->
     <TextView
         android:id="@+id/tvMeta"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textSize="12sp"
-        android:textColor="#999999"
+        android:textColor="@color/colorTextTertiary"
         android:layout_marginStart="8dp"
         android:visibility="gone" />
 
-    <!-- Chevron (folders only) -->
     <TextView
         android:id="@+id/tvChevron"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="›"
         android:textSize="20sp"
-        android:textColor="#CCCCCC"
+        android:textColor="@color/colorChevron"
         android:layout_marginStart="4dp"
         android:visibility="gone" />
 
