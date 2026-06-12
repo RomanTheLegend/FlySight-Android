@@ -10,6 +10,7 @@ object FlySightUuids {
 }
 
 object FtOpcode {
+    const val DELETE_FILE: Byte = 0x01
     const val READ_FILE:  Byte = 0x02
     const val WRITE_FILE: Byte = 0x03
     const val LIST_DIR:   Byte = 0x05

@@ -43,6 +43,7 @@ class BleManager(private val context: Context) {
 
     companion object {
         private const val TAG = "FlySightBle"
+        var bleLogging = false   // set to true to enable verbose BLE packet logs
         private const val PING_INTERVAL_MS   = 15_000L
         private const val OP_TIMEOUT_MS      = 5_000L
         private const val XFER_TIMEOUT_MS    = 180_000L
@@ -84,7 +85,7 @@ class BleManager(private val context: Context) {
     private val gattCb = object : BluetoothGattCallback() {
 
         override fun onConnectionStateChange(g: BluetoothGatt, status: Int, newState: Int) {
-            Log.d(TAG, "ConnectionState status=$status newState=$newState")
+            if (bleLogging) Log.d(TAG, "ConnectionState status=$status newState=$newState")
             when (newState) {
                 BluetoothProfile.STATE_CONNECTED    -> connectedCh.trySend(true)
                 BluetoothProfile.STATE_DISCONNECTED -> {
@@ -100,7 +101,7 @@ class BleManager(private val context: Context) {
 
         override fun onMtuChanged(g: BluetoothGatt, mtu: Int, status: Int) {
             negotiatedMtu = if (status == BluetoothGatt.GATT_SUCCESS) mtu else 23
-            Log.d(TAG, "MTU=$negotiatedMtu")
+            if (bleLogging) Log.d(TAG, "MTU=$negotiatedMtu")
             mtuCh.trySend(negotiatedMtu)
         }
 
@@ -138,7 +139,7 @@ class BleManager(private val context: Context) {
 
     private fun routePacket(uuid: UUID, value: ByteArray) {
         if (uuid == FlySightUuids.FT_PACKET_OUT && value.isNotEmpty()) {
-            Log.v(TAG, "RX [${value[0].toInt() and 0xFF}] ${value.size}b")
+            if (bleLogging) Log.d(TAG, "RX ${value.size}b: [${value.joinToString(" ") { "%02x".format(it) }}]")
             notifyCh.trySend(value.copyOf())
         }
     }
@@ -340,15 +341,23 @@ class BleManager(private val context: Context) {
                 val counter = pkt[1].toInt() and 0xFF
                 val data = if (pkt.size > 2) pkt.copyOfRange(2, pkt.size) else ByteArray(0)
 
-                if (counter == expected) {
-                    rawWrite(byteArrayOf(FtOpcode.ACK_DATA, counter.toByte()))
-                    if (data.isEmpty()) break  // EOF marker
-                    buf.write(data)
-                    received += data.size
-                    onProgress?.invoke(received, totalBytes)
-                    expected = (expected + 1) and 0xFF
+                val behind = (expected - counter) and 0xFF
+                when {
+                    behind == 0 -> {
+                        // In-order: new packet
+                        rawWrite(byteArrayOf(FtOpcode.ACK_DATA, counter.toByte()), delayMs = 10)
+                        if (data.isEmpty()) break  // EOF marker
+                        buf.write(data)
+                        received += data.size
+                        onProgress?.invoke(received, totalBytes)
+                        expected = (expected + 1) and 0xFF
+                    }
+                    behind in 1..8 -> {
+                        // GBN retransmission — re-ACK so firmware can advance next_ack
+                        rawWrite(byteArrayOf(FtOpcode.ACK_DATA, counter.toByte()), delayMs = 10)
+                    }
+                    // else: out-of-order future packet — ignore
                 }
-                // Ignore out-of-order packets — device retransmits after 200 ms
             }
         } catch (e: Exception) {
             runCatching { rawWrite(byteArrayOf(FtOpcode.CANCEL)) }
@@ -411,6 +420,53 @@ class BleManager(private val context: Context) {
         } catch (e: Exception) {
             runCatching { rawWrite(byteArrayOf(FtOpcode.CANCEL)) }
             throw e
+        }
+    }
+
+    suspend fun deleteRecursive(path: String) {
+        pingJob?.cancel()
+        try {
+            doDeleteRecursive(path)
+        } finally {
+            if (gatt != null) startPing()
+        }
+    }
+
+    private suspend fun doDeleteRecursive(path: String) {
+        if (bleLogging) Log.d(TAG, "DELETE_RECURSIVE: listing '$path'")
+        val entries = doListDir(path)
+        for (entry in entries) {
+            val entryPath = if (path.isEmpty()) entry.name else "$path/${entry.name}"
+            if (entry.isDirectory) {
+                doDeleteRecursive(entryPath)
+            } else {
+                doDelete(entryPath)
+            }
+        }
+        doDelete(path)
+    }
+
+    private suspend fun doDelete(path: String) {
+        val pathBytes = path.toByteArray(Charsets.UTF_8)
+        val cmd = ByteArray(1 + pathBytes.size + 1)
+        cmd[0] = FtOpcode.DELETE_FILE
+        pathBytes.copyInto(cmd, 1)
+
+        if (bleLogging) Log.d(TAG, "DELETE TX: path='$path' packet=[${cmd.joinToString(" ") { "%02x".format(it) }}]")
+        drain()
+        rawWrite(cmd)
+        if (bleLogging) Log.d(TAG, "DELETE: waiting for ACK/NAK…")
+
+        when (waitAck(FtOpcode.DELETE_FILE)) {
+            true  -> if (bleLogging) Log.d(TAG, "DELETE: ACK — success for '$path'")
+            false -> {
+                if (bleLogging) Log.d(TAG, "DELETE: NAK — device rejected for '$path'")
+                error("Delete rejected by device (NAK) for '$path'")
+            }
+            null  -> {
+                if (bleLogging) Log.d(TAG, "DELETE: timeout for '$path'")
+                error("Delete timeout for '$path'")
+            }
         }
     }
 
@@ -505,12 +561,13 @@ class BleManager(private val context: Context) {
         while (notifyCh.tryReceive().isSuccess) { /* discard stale packets */ }
     }
 
-    private suspend fun rawWrite(data: ByteArray) {
-        delay(20)  // brief inter-packet pause; BLE stack on Android is not fully async
+    private suspend fun rawWrite(data: ByteArray, delayMs: Long = 20L) {
+        if (delayMs > 0) delay(delayMs)
         val char = ftPacketIn ?: error("Not connected")
         val g    = gatt        ?: error("Not connected")
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            g.writeCharacteristic(char, data, BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE)
+        if (bleLogging) Log.d(TAG, "TX ${data.size}b: [${data.joinToString(" ") { "%02x".format(it) }}]")
+        val ok = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            g.writeCharacteristic(char, data, BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE) == BluetoothGatt.GATT_SUCCESS
         } else {
             @Suppress("DEPRECATION")
             char.value = data
@@ -518,6 +575,7 @@ class BleManager(private val context: Context) {
             @Suppress("DEPRECATION")
             g.writeCharacteristic(char)
         }
+        if (!ok && bleLogging) Log.w(TAG, "TX FAILED — writeCharacteristic returned error for [${data.joinToString(" ") { "%02x".format(it) }}]")
     }
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
