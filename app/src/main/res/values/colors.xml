@@ -3,6 +3,10 @@
     <color name="colorPrimary">#1565C0</color>
     <color name="colorPrimaryDark">#0D47A1</color>
     <color name="colorAccent">#29B6F6</color>
+    <color name="colorGreen">#00897B</color>
+    <color name="colorBackground">#F2F3F7</color>
+    <color name="colorSurface">#FFFFFF</color>
+    <color name="colorDisconnect">#E53935</color>
     <color name="white">#FFFFFF</color>
     <color name="black">#000000</color>
 </resources>

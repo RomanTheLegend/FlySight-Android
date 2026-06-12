@@ -51,8 +51,6 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        supportActionBar?.title = "FlySight 2 Manager"
-
         ble = (application as FlySightApp).bleManager
 
         val connectDevice: (ScannedDevice) -> Unit = { device ->

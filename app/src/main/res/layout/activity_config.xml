@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    android:background="@color/colorBackground">
 
+    <!-- Header -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -11,17 +14,51 @@
         android:gravity="center_vertical"
         android:paddingStart="16dp"
         android:paddingEnd="16dp"
-        android:paddingTop="8dp"
-        android:paddingBottom="8dp">
+        android:paddingTop="24dp"
+        android:paddingBottom="12dp">
 
-        <TextView
-            android:id="@+id/tvStatus"
+        <FrameLayout
+            android:id="@+id/btnHeaderBack"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="@drawable/bg_back_btn"
+            android:layout_marginEnd="12dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="←"
+                android:textSize="16sp"
+                android:textColor="#333333" />
+
+        </FrameLayout>
+
+        <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Tap Read to load settings from device"
-            android:textSize="13sp"
-            android:textColor="#666666" />
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="FlySight Config"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColor="#111111" />
+
+            <TextView
+                android:id="@+id/tvStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="No settings loaded"
+                android:textSize="13sp"
+                android:textColor="#888888" />
+
+        </LinearLayout>
 
         <ProgressBar
             android:id="@+id/progressBar"
@@ -32,33 +69,38 @@
 
     </LinearLayout>
 
+    <!-- READ / SAVE buttons -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:paddingStart="16dp"
         android:paddingEnd="16dp"
-        android:paddingBottom="8dp">
+        android:paddingBottom="12dp">
 
         <Button
             android:id="@+id/btnRead"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="44dp"
             android:layout_weight="1"
-            android:text="Read"
-            android:layout_marginEnd="4dp" />
+            android:text="READ"
+            android:textSize="14sp"
+            android:layout_marginEnd="6dp" />
 
         <Button
             android:id="@+id/btnSave"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="44dp"
             android:layout_weight="1"
-            android:text="Save to Device"
+            android:text="SAVE TO DEVICE"
+            android:textSize="13sp"
             android:enabled="false"
-            android:layout_marginStart="4dp" />
+            android:layout_marginStart="6dp"
+            app:backgroundTint="@color/colorGreen" />
 
     </LinearLayout>
 
+    <!-- Settings list / empty state -->
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -69,28 +111,68 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:clipToPadding="false"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
             android:paddingBottom="8dp"
             android:visibility="gone" />
 
-        <TextView
+        <!-- Empty state -->
+        <LinearLayout
             android:id="@+id/tvEmpty"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:text="No settings loaded"
-            android:textColor="#AAAAAA"
-            android:textSize="15sp" />
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:paddingStart="32dp"
+            android:paddingEnd="32dp">
+
+            <FrameLayout
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:background="@drawable/bg_icon_file"
+                android:layout_marginBottom="20dp">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:text="⚙"
+                    android:textSize="36sp"
+                    android:textColor="#90A4AE" />
+            </FrameLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="No Settings Loaded"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="#333333"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Tap READ to load the current configuration from your FlySight device."
+                android:textSize="13sp"
+                android:textColor="#999999"
+                android:gravity="center" />
+
+        </LinearLayout>
 
     </FrameLayout>
 
-    <Button
+    <!-- Disconnect -->
+    <TextView
         android:id="@+id/btnDisconnect"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginBottom="8dp"
-        android:text="Disconnect" />
+        android:layout_height="52dp"
+        android:background="@drawable/bg_disconnect"
+        android:text="Disconnect"
+        android:textColor="@color/colorDisconnect"
+        android:textSize="15sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:clickable="true"
+        android:focusable="true" />
 
 </LinearLayout>

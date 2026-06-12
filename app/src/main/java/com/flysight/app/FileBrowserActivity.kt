@@ -6,6 +6,7 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.PopupMenu
 import android.widget.ProgressBar
@@ -24,22 +25,31 @@ import com.flysight.app.databinding.ActivityFileBrowserBinding
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
+sealed class FileBrowserItem {
+    data class Header(val title: String) : FileBrowserItem()
+    data class Entry(val dirEntry: DirEntry) : FileBrowserItem()
+}
+
 class FileBrowserActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityFileBrowserBinding
     private lateinit var fileAdapter: FileListAdapter
 
-    // Stack of paths; "" = root
     private val pathStack = ArrayDeque<String>()
     private val currentPath get() = pathStack.lastOrNull() ?: ""
+
+    private val datePattern = Regex("""\d{2}-\d{2}-\d{2}""")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityFileBrowserBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        supportActionBar?.title = "Files"
 
         val ble = (application as FlySightApp).bleManager
+
+        binding.btnHeaderBack.setOnClickListener {
+            onBackPressedDispatcher.onBackPressed()
+        }
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -107,15 +117,7 @@ class FileBrowserActivity : AppCompatActivity() {
         )
 
         binding.recyclerFiles.layoutManager = LinearLayoutManager(this)
-        binding.recyclerFiles.addItemDecoration(
-            DividerItemDecoration(this, DividerItemDecoration.VERTICAL)
-        )
         binding.recyclerFiles.adapter = fileAdapter
-
-        binding.btnBack.setOnClickListener {
-            pathStack.removeLast()
-            loadDirectory(ble)
-        }
 
         binding.btnDisconnect.setOnClickListener {
             ble.disconnect()
@@ -124,9 +126,7 @@ class FileBrowserActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             ble.state.collectLatest { state ->
-                if (state == BleState.Disconnected) {
-                    finish()
-                }
+                if (state == BleState.Disconnected) finish()
             }
         }
 
@@ -157,8 +157,7 @@ class FileBrowserActivity : AppCompatActivity() {
     }
 
     private fun loadDirectory(ble: com.flysight.app.ble.BleManager) {
-        binding.tvPath.text = if (currentPath.isEmpty()) "/" else "/$currentPath"
-        binding.btnBack.visibility = if (pathStack.size > 1) View.VISIBLE else View.GONE
+        binding.tvPath.text = if (currentPath.isEmpty()) "/ root" else "/$currentPath"
         binding.tvEmpty.visibility = View.GONE
         setLoading(true)
 
@@ -166,12 +165,11 @@ class FileBrowserActivity : AppCompatActivity() {
             try {
                 val all = ble.listDir(currentPath)
 
-                // If this folder contains TRACK.CSV, open it directly and don't list the folder
                 val trackCsv = all.firstOrNull { it.name.equals("TRACK.CSV", ignoreCase = true) }
                 if (trackCsv != null) {
                     val trackPath = if (currentPath.isEmpty()) trackCsv.name
                                     else "$currentPath/${trackCsv.name}"
-                    pathStack.removeLast()   // don't keep this dir in the back-stack
+                    pathStack.removeLast()
                     setLoading(false)
                     startActivity(Intent(this@FileBrowserActivity, FileViewActivity::class.java).apply {
                         putExtra(FileViewActivity.EXTRA_NAME, trackCsv.name)
@@ -181,12 +179,28 @@ class FileBrowserActivity : AppCompatActivity() {
                     return@launch
                 }
 
-                val entries = all.filter { entry ->
-                    entry.isDirectory ||
-                    entry.name.equals("CONFIG.TXT", ignoreCase = true)
+                val dateFolders    = all.filter { it.isDirectory && datePattern.matches(it.name) }
+                val specialFolders = all.filter { it.isDirectory && !datePattern.matches(it.name) }
+                val files          = all.filter { !it.isDirectory &&
+                    it.name.equals("CONFIG.TXT", ignoreCase = true) }
+
+                val items = buildList<FileBrowserItem> {
+                    if (dateFolders.isNotEmpty()) {
+                        add(FileBrowserItem.Header("FOLDERS"))
+                        dateFolders.forEach { add(FileBrowserItem.Entry(it)) }
+                    }
+                    if (specialFolders.isNotEmpty()) {
+                        add(FileBrowserItem.Header("SPECIAL FOLDERS"))
+                        specialFolders.forEach { add(FileBrowserItem.Entry(it)) }
+                    }
+                    if (files.isNotEmpty()) {
+                        add(FileBrowserItem.Header("FILES"))
+                        files.forEach { add(FileBrowserItem.Entry(it)) }
+                    }
                 }
-                fileAdapter.update(entries)
-                binding.tvEmpty.visibility = if (entries.isEmpty()) View.VISIBLE else View.GONE
+
+                fileAdapter.update(items)
+                binding.tvEmpty.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
             } catch (e: Exception) {
                 Toast.makeText(
                     this@FileBrowserActivity,
@@ -200,44 +214,78 @@ class FileBrowserActivity : AppCompatActivity() {
     }
 
     private fun setLoading(loading: Boolean) {
-        binding.progressBar.visibility = if (loading) View.VISIBLE else View.GONE
-        binding.recyclerFiles.visibility = if (loading) View.GONE else View.VISIBLE
+        binding.progressBar.visibility    = if (loading) View.VISIBLE else View.GONE
+        binding.recyclerFiles.visibility  = if (loading) View.GONE else View.VISIBLE
     }
 }
 
 class FileListAdapter(
     private val onClick: (DirEntry) -> Unit,
     private val onLongClick: ((DirEntry, View) -> Unit)? = null
-) : RecyclerView.Adapter<FileListAdapter.VH>() {
+) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
-    private var items = listOf<DirEntry>()
-
-    fun update(list: List<DirEntry>) { items = list; notifyDataSetChanged() }
-
-    inner class VH(view: View) : RecyclerView.ViewHolder(view) {
-        val tvName:    TextView = view.findViewById(R.id.tvName)
-        val tvMeta:    TextView = view.findViewById(R.id.tvMeta)
-        val tvChevron: TextView = view.findViewById(R.id.tvChevron)
+    private companion object {
+        const val TYPE_HEADER = 0
+        const val TYPE_ENTRY  = 1
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = VH(
-        LayoutInflater.from(parent.context).inflate(R.layout.item_file, parent, false)
-    )
+    private var items = listOf<FileBrowserItem>()
+
+    fun update(list: List<FileBrowserItem>) { items = list; notifyDataSetChanged() }
+
+    override fun getItemViewType(position: Int) = when (items[position]) {
+        is FileBrowserItem.Header -> TYPE_HEADER
+        is FileBrowserItem.Entry  -> TYPE_ENTRY
+    }
+
+    inner class HeaderVH(view: View) : RecyclerView.ViewHolder(view) {
+        val tvTitle: TextView = view.findViewById(R.id.tvSectionTitle)
+    }
+
+    inner class EntryVH(view: View) : RecyclerView.ViewHolder(view) {
+        val tvName:    TextView    = view.findViewById(R.id.tvName)
+        val tvMeta:    TextView    = view.findViewById(R.id.tvMeta)
+        val tvChevron: TextView    = view.findViewById(R.id.tvChevron)
+        val tvIcon:    TextView    = view.findViewById(R.id.tvIcon)
+        val iconBg:    FrameLayout = view.findViewById(R.id.iconBg)
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+        val inflater = LayoutInflater.from(parent.context)
+        return when (viewType) {
+            TYPE_HEADER -> HeaderVH(inflater.inflate(R.layout.item_file_section, parent, false))
+            else        -> EntryVH(inflater.inflate(R.layout.item_file, parent, false))
+        }
+    }
 
     override fun getItemCount() = items.size
 
-    override fun onBindViewHolder(holder: VH, position: Int) {
-        val entry = items[position]
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+        when (val item = items[position]) {
+            is FileBrowserItem.Header -> (holder as HeaderVH).tvTitle.text = item.title
+            is FileBrowserItem.Entry  -> bindEntry(holder as EntryVH, item.dirEntry)
+        }
+    }
+
+    private fun bindEntry(holder: EntryVH, entry: DirEntry) {
         holder.tvName.text = entry.name
         if (entry.isDirectory) {
-            holder.tvName.setTextColor(0xFF1565C0.toInt())
-            holder.tvMeta.visibility = View.GONE
             holder.tvChevron.visibility = View.VISIBLE
+            holder.tvMeta.visibility    = View.GONE
+            holder.iconBg.setBackgroundResource(R.drawable.bg_icon_folder)
+            holder.tvIcon.text = when {
+                entry.name.equals("AUDIO", ignoreCase = true) -> "♪"
+                entry.name.equals("TEMP",  ignoreCase = true) -> "⏱"
+                else -> "📁"
+            }
+            holder.tvName.setTextColor(0xFF111111.toInt())
         } else {
-            holder.tvName.setTextColor(0xFF222222.toInt())
-            holder.tvMeta.text = formatSize(entry.size)
-            holder.tvMeta.visibility = View.VISIBLE
             holder.tvChevron.visibility = View.GONE
+            holder.tvMeta.text          = formatSize(entry.size)
+            holder.tvMeta.visibility    = View.VISIBLE
+            holder.iconBg.setBackgroundResource(R.drawable.bg_icon_file)
+            holder.tvIcon.text = "⚙"
+            holder.tvName.setTextColor(0xFF111111.toInt())
         }
         holder.itemView.setOnClickListener { onClick(entry) }
         if (entry.isDirectory && onLongClick != null) {

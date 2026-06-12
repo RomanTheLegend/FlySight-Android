@@ -42,10 +42,15 @@ class FileViewActivity : AppCompatActivity() {
         val path      = intent.getStringExtra(EXTRA_PATH) ?: ""
         val totalSize = intent.getLongExtra(EXTRA_SIZE, 0L)
 
-        // Title = parent folder name (e.g. "23-06-12" for "23-06-12/TRACK.CSV")
         val parts = path.split("/").filter { it.isNotEmpty() }
-        supportActionBar?.title = if (parts.size >= 2) parts[parts.size - 2] else name
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        binding.tvTitle.text = when {
+            parts.size >= 3 -> "${parts[parts.size - 3]} · ${parts[parts.size - 2]}"
+            parts.size >= 2 -> parts[parts.size - 2]
+            else            -> name
+        }
+        binding.tvSubtitle.text = "Jump recording"
+
+        binding.btnHeaderBack.setOnClickListener { finish() }
 
         initProgressBar(totalSize)
         setStatus("Downloading $name…")
@@ -71,7 +76,6 @@ class FileViewActivity : AppCompatActivity() {
         }
     }
 
-    override fun onSupportNavigateUp(): Boolean { finish(); return true }
 
     // ── Data model ─────────────────────────────────────────────────────────
 
@@ -278,9 +282,9 @@ class FileViewActivity : AppCompatActivity() {
 
         chart.animateX(400)
 
-        binding.loadingPanel.visibility  = View.GONE
-        chart.visibility                 = View.VISIBLE
-        binding.valuesPanel.visibility   = View.VISIBLE
+        binding.loadingPanel.visibility = View.GONE
+        binding.chartCard.visibility    = View.VISIBLE
+        binding.valuesPanel.visibility  = View.VISIBLE
 
         updateValuesAt(0f)
     }
@@ -321,7 +325,7 @@ class FileViewActivity : AppCompatActivity() {
     private fun setStatus(msg: String) {
         binding.tvStatus.text           = msg
         binding.loadingPanel.visibility = View.VISIBLE
-        binding.lineChart.visibility    = View.GONE
+        binding.chartCard.visibility    = View.GONE
         binding.valuesPanel.visibility  = View.GONE
     }
 }

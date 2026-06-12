@@ -29,10 +29,10 @@ class ConfigActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityConfigBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        supportActionBar?.title = "config.txt"
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
         ble = (application as FlySightApp).bleManager
+
+        binding.btnHeaderBack.setOnClickListener { finish() }
 
         binding.recyclerSettings.layoutManager = LinearLayoutManager(this)
 
@@ -113,8 +113,6 @@ class ConfigActivity : AppCompatActivity() {
         binding.btnSave.isEnabled       = !loading && originalText.isNotBlank()
         binding.btnDisconnect.isEnabled = !loading
     }
-
-    override fun onSupportNavigateUp(): Boolean { finish(); return true }
 
     private fun setStatus(text: String) { binding.tvStatus.text = text }
 
