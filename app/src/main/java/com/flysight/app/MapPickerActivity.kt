@@ -3,6 +3,10 @@ package com.flysight.app
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
 import android.location.Location
 import android.location.LocationManager
 import android.os.Bundle
@@ -17,6 +21,8 @@ import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.overlay.MapEventsOverlay
 import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
+import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 
 class MapPickerActivity : AppCompatActivity() {
 
@@ -31,6 +37,7 @@ class MapPickerActivity : AppCompatActivity() {
     }
 
     private lateinit var binding: ActivityMapPickerBinding
+    private lateinit var myLocationOverlay: MyLocationNewOverlay
     private var dzMarker:  Marker? = null
     private var tgtMarker: Marker? = null
     private var dzLat:  Double? = null
@@ -50,7 +57,14 @@ class MapPickerActivity : AppCompatActivity() {
 
         binding.btnBack.setOnClickListener { finish() }
         binding.btnDone.setOnClickListener { returnResult() }
-        binding.fabMyLocation.setOnClickListener { centerOnCurrentLocation() }
+        binding.fabMyLocation.setOnClickListener {
+            val loc = myLocationOverlay.myLocation
+            if (loc != null) {
+                binding.mapView.controller.animateTo(loc)
+            } else {
+                centerOnCurrentLocation()
+            }
+        }
 
         if (intent.getBooleanExtra(EXTRA_HAS_DZ, false)) {
             dzLat = intent.getDoubleExtra(EXTRA_DZ_LAT, 0.0)
@@ -65,6 +79,16 @@ class MapPickerActivity : AppCompatActivity() {
         map.setTileSource(TileSourceFactory.MAPNIK)
         map.setMultiTouchControls(true)
         map.controller.setZoom(14.0)
+
+        myLocationOverlay = MyLocationNewOverlay(GpsMyLocationProvider(this), map).apply {
+            setPersonIcon(makeLocationDot(48))
+            setDirectionIcon(makeLocationDot(48))
+        }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED) {
+            myLocationOverlay.enableMyLocation()
+        }
+        map.overlays.add(myLocationOverlay)
 
         map.overlays.add(MapEventsOverlay(object : MapEventsReceiver {
             override fun singleTapConfirmedHelper(p: GeoPoint) = false
@@ -124,6 +148,7 @@ class MapPickerActivity : AppCompatActivity() {
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == LOC_PERM_REQ && grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) {
+            myLocationOverlay.enableMyLocation()
             applyLastKnownLocation()
         }
     }
@@ -177,6 +202,30 @@ class MapPickerActivity : AppCompatActivity() {
         finish()
     }
 
-    override fun onResume() { super.onResume(); binding.mapView.onResume() }
-    override fun onPause()  { super.onPause();  binding.mapView.onPause() }
+    private fun makeLocationDot(sizePx: Int): Bitmap {
+        val bmp = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
+        val c   = Canvas(bmp)
+        val r   = sizePx / 2f
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+        paint.color = Color.WHITE
+        c.drawCircle(r, r, r, paint)
+        paint.color = Color.rgb(0x22, 0x88, 0xFF)
+        c.drawCircle(r, r, r * 0.70f, paint)
+        return bmp
+    }
+
+    override fun onResume() {
+        super.onResume()
+        binding.mapView.onResume()
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED) {
+            myLocationOverlay.enableMyLocation()
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        binding.mapView.onPause()
+        myLocationOverlay.disableMyLocation()
+    }
 }
