@@ -1,8 +1,11 @@
 package com.flysight.app
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -21,9 +24,13 @@ class ConfigActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityConfigBinding
     private lateinit var ble: BleManager
+    private lateinit var mapPickerLauncher: ActivityResultLauncher<Intent>
 
     private var originalText: String = ""
     private var settingsItems: List<SettingItem> = emptyList()
+    private var settingsAdapter: SettingsAdapter? = null
+    private var dzCoordPicker:  SettingItem.CoordPicker? = null
+    private var tgtCoordPicker: SettingItem.CoordPicker? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,14 +40,35 @@ class ConfigActivity : AppCompatActivity() {
         ble = (application as FlySightApp).bleManager
 
         binding.btnHeaderBack.setOnClickListener { finish() }
-
         binding.recyclerSettings.layoutManager = LinearLayoutManager(this)
-
-        binding.btnRead.setOnClickListener { readConfig() }
+        binding.btnRead.setOnClickListener { finish() }
         binding.btnSave.setOnClickListener { saveConfig() }
         binding.btnDisconnect.setOnClickListener {
             ble.disconnect()
             finish()
+        }
+
+        mapPickerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == RESULT_OK) {
+                val data = result.data ?: return@registerForActivityResult
+                if (data.getBooleanExtra(MapPickerActivity.EXTRA_HAS_DZ, false)) {
+                    val lat = data.getDoubleExtra(MapPickerActivity.EXTRA_DZ_LAT, 0.0)
+                    val lon = data.getDoubleExtra(MapPickerActivity.EXTRA_DZ_LON, 0.0)
+                    dzCoordPicker?.apply {
+                        latRaw = Math.round(lat * 1e7).toString()
+                        lonRaw = Math.round(lon * 1e7).toString()
+                    }
+                }
+                if (data.getBooleanExtra(MapPickerActivity.EXTRA_HAS_TGT, false)) {
+                    val lat = data.getDoubleExtra(MapPickerActivity.EXTRA_TGT_LAT, 0.0)
+                    val lon = data.getDoubleExtra(MapPickerActivity.EXTRA_TGT_LON, 0.0)
+                    tgtCoordPicker?.apply {
+                        latRaw = Math.round(lat * 1e7).toString()
+                        lonRaw = Math.round(lon * 1e7).toString()
+                    }
+                }
+                settingsAdapter?.notifyDataSetChanged()
+            }
         }
 
         lifecycleScope.launch {
@@ -57,6 +85,8 @@ class ConfigActivity : AppCompatActivity() {
                 }
             }
         }
+
+        readConfig()
     }
 
     private fun readConfig() {
@@ -68,7 +98,8 @@ class ConfigActivity : AppCompatActivity() {
                 originalText = String(bytes, Charsets.UTF_8)
                 val settings = ConfigParser.parse(originalText)
                 settingsItems = buildItems(settings)
-                binding.recyclerSettings.adapter = SettingsAdapter(settingsItems)
+                settingsAdapter = SettingsAdapter(settingsItems)
+                binding.recyclerSettings.adapter = settingsAdapter
                 binding.recyclerSettings.visibility = View.VISIBLE
                 binding.tvEmpty.visibility = View.GONE
                 setStatus("${settingsItems.count { it !is SettingItem.Section }} settings loaded")
@@ -107,6 +138,29 @@ class ConfigActivity : AppCompatActivity() {
         }
     }
 
+    private fun openMap() {
+        val intent = Intent(this, MapPickerActivity::class.java)
+        dzCoordPicker?.let {
+            val lat = it.latRaw.toLongOrNull() ?: 0L
+            val lon = it.lonRaw.toLongOrNull() ?: 0L
+            if (lat != 0L || lon != 0L) {
+                intent.putExtra(MapPickerActivity.EXTRA_HAS_DZ, true)
+                intent.putExtra(MapPickerActivity.EXTRA_DZ_LAT, lat / 1e7)
+                intent.putExtra(MapPickerActivity.EXTRA_DZ_LON, lon / 1e7)
+            }
+        }
+        tgtCoordPicker?.let {
+            val lat = it.latRaw.toLongOrNull() ?: 0L
+            val lon = it.lonRaw.toLongOrNull() ?: 0L
+            if (lat != 0L || lon != 0L) {
+                intent.putExtra(MapPickerActivity.EXTRA_HAS_TGT, true)
+                intent.putExtra(MapPickerActivity.EXTRA_TGT_LAT, lat / 1e7)
+                intent.putExtra(MapPickerActivity.EXTRA_TGT_LON, lon / 1e7)
+            }
+        }
+        mapPickerLauncher.launch(intent)
+    }
+
     private fun setLoading(loading: Boolean) {
         binding.progressBar.visibility  = if (loading) View.VISIBLE else View.GONE
         binding.btnRead.isEnabled       = !loading
@@ -126,12 +180,10 @@ class ConfigActivity : AppCompatActivity() {
         fun num(key: String, label: String, unit: String = "", def: String = "0") =
             SettingItem.NumberInput(key, label, s[key] ?: def, unit)
 
-        // GPS model: firmware skips value 1 (no such model)
         val gpsModelOpts = listOf("Portable", "Stationary", "Pedestrian", "Automotive",
                                    "Sea", "Airborne <1G", "Airborne <2G", "Airborne <4G")
         val gpsModelVals = listOf("0", "2", "3", "4", "5", "6", "7", "8")
 
-        // Tone/speech mode options per config.c HANDLE_VALUE constraints
         val modeOpts = listOf("Horizontal Speed", "Vertical Speed", "Glide Ratio",
                                "Inverse Glide Ratio", "Total Speed",
                                "Direction to Dest.", "Distance to Dest.",
@@ -145,6 +197,17 @@ class ConfigActivity : AppCompatActivity() {
 
         val spModeOpts = modeOpts + listOf("Altitude above DZ")
         val spModeVals = modeVals + listOf("12")
+
+        val dzCoord = SettingItem.CoordPicker(
+            "Lat", "Lon", "DZ Coordinates",
+            s["Lat"] ?: "0", s["Lon"] ?: "0"
+        ) { openMap() }
+        val tgtCoord = SettingItem.CoordPicker(
+            "Target_Lat", "Target_Lon", "Target Coordinates",
+            s["Target_Lat"] ?: "0", s["Target_Lon"] ?: "0"
+        ) { openMap() }
+        dzCoordPicker  = dzCoord
+        tgtCoordPicker = tgtCoord
 
         return buildList {
             // ── GPS ──────────────────────────────────────────────────────────
@@ -199,9 +262,9 @@ class ConfigActivity : AppCompatActivity() {
 
             // ── Altitude Alarms ──────────────────────────────────────────────
             add(SettingItem.Section("Altitude Alarms"))
-            add(num("DZ_Elev",    "Dropzone Elevation", "m", "0"))
-            add(num("Win_Above",  "Window Above",        "m", "0"))
-            add(num("Win_Below",  "Window Below",        "m", "0"))
+            add(num("DZ_Elev",   "Dropzone Elevation", "m", "0"))
+            add(num("Win_Above", "Window Above",        "m", "0"))
+            add(num("Win_Below", "Window Below",        "m", "0"))
 
             // ── Altitude Mode ────────────────────────────────────────────────
             add(SettingItem.Section("Altitude Mode"))
@@ -225,7 +288,7 @@ class ConfigActivity : AppCompatActivity() {
             add(toggle("Cold_Start",     "Cold Start"))
             add(num("Ble_Tx_Power",      "BLE TX Power", "(0–31)", "25"))
 
-            // ── Sensor ODR / FS ──────────────────────────────────────────────
+            // ── Sensor Settings ──────────────────────────────────────────────
             add(SettingItem.Section("Sensor Settings"))
             add(num("Baro_ODR",  "Barometer ODR",       "(0–7)",  "2"))
             add(num("Hum_ODR",   "Humidity ODR",        "(0–3)",  "1"))
@@ -237,14 +300,12 @@ class ConfigActivity : AppCompatActivity() {
 
             // ── Navigation ───────────────────────────────────────────────────
             add(SettingItem.Section("Navigation"))
-            add(num("Lat",       "Latitude",         "×1e-7°", "0"))
-            add(num("Lon",       "Longitude",        "×1e-7°", "0"))
-            add(num("Bearing",   "Bearing",          "°",      "0"))
-            add(num("End_Nav",   "Min Altitude",     "m",      "1500"))
-            add(num("Max_Dist",  "Max Distance",     "m",      "10000"))
-            add(num("Min_Angle", "Min Direction Angle", "°",   "5"))
-            add(num("Target_Lat","Target Latitude",  "×1e-7°", "0"))
-            add(num("Target_Lon","Target Longitude", "×1e-7°", "0"))
+            add(dzCoord)
+            add(num("Bearing",   "Bearing",             "°",  "0"))
+            add(num("End_Nav",   "Min Altitude",        "m",  "1500"))
+            add(num("Max_Dist",  "Max Distance",        "m",  "10000"))
+            add(num("Min_Angle", "Min Direction Angle", "°",  "5"))
+            add(tgtCoord)
 
             // ── ActiveLook ───────────────────────────────────────────────────
             add(SettingItem.Section("ActiveLook"))

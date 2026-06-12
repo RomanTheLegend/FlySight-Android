@@ -25,6 +25,7 @@ class SettingsAdapter(private val items: List<SettingItem>) :
             SettingItem.VIEW_SECTION -> SectionVH(inf.inflate(R.layout.item_setting_section, parent, false))
             SettingItem.VIEW_TOGGLE  -> ToggleVH(inf.inflate(R.layout.item_setting_toggle,  parent, false))
             SettingItem.VIEW_CHOICE  -> ChoiceVH(inf.inflate(R.layout.item_setting_choice,  parent, false))
+            SettingItem.VIEW_COORD   -> CoordPickerVH(inf.inflate(R.layout.item_setting_coord, parent, false))
             else                     -> NumberVH(inf.inflate(R.layout.item_setting_number,  parent, false))
         }
     }
@@ -35,6 +36,7 @@ class SettingsAdapter(private val items: List<SettingItem>) :
             is SettingItem.Toggle      -> (holder as ToggleVH).bind(item)
             is SettingItem.Choice      -> (holder as ChoiceVH).bind(item)
             is SettingItem.NumberInput -> (holder as NumberVH).bind(item)
+            is SettingItem.CoordPicker -> (holder as CoordPickerVH).bind(item)
         }
     }
 
@@ -101,6 +103,24 @@ class SettingsAdapter(private val items: List<SettingItem>) :
             tvUnit.text = item.unit
             tvUnit.visibility = if (item.unit.isEmpty()) View.GONE else View.VISIBLE
             bound = item
+        }
+    }
+
+    class CoordPickerVH(view: View) : RecyclerView.ViewHolder(view) {
+        private val tvLabel:  TextView = view.findViewById(R.id.tvLabel)
+        private val tvCoords: TextView = view.findViewById(R.id.tvCoords)
+
+        fun bind(item: SettingItem.CoordPicker) {
+            tvLabel.text  = item.label
+            tvCoords.text = formatCoords(item.latRaw, item.lonRaw)
+            itemView.setOnClickListener { item.onPickClicked() }
+        }
+
+        private fun formatCoords(latRaw: String, lonRaw: String): String {
+            val lat = latRaw.toLongOrNull()?.let { it / 1e7 } ?: 0.0
+            val lon = lonRaw.toLongOrNull()?.let { it / 1e7 } ?: 0.0
+            return if (lat == 0.0 && lon == 0.0) "Not set"
+                   else "%.6f°,  %.6f°".format(lat, lon)
         }
     }
 }

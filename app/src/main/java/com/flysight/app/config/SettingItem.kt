@@ -6,6 +6,7 @@ sealed class SettingItem {
         const val VIEW_TOGGLE  = 1
         const val VIEW_CHOICE  = 2
         const val VIEW_NUMBER  = 3
+        const val VIEW_COORD   = 4
     }
     abstract val viewType: Int
 
@@ -39,5 +40,16 @@ sealed class SettingItem {
         val isDecimal: Boolean = false
     ) : SettingItem() {
         override val viewType = VIEW_NUMBER
+    }
+
+    class CoordPicker(
+        val latKey: String,
+        val lonKey: String,
+        val label: String,
+        var latRaw: String,
+        var lonRaw: String,
+        val onPickClicked: () -> Unit
+    ) : SettingItem() {
+        override val viewType = VIEW_COORD
     }
 }

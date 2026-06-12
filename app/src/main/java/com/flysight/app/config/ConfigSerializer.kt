@@ -9,7 +9,11 @@ object ConfigSerializer {
                 is SettingItem.Toggle      -> map[item.key] = if (item.enabled) "1" else "0"
                 is SettingItem.Choice      -> map[item.key] = item.values[item.selectedIndex]
                 is SettingItem.NumberInput -> if (item.value.isNotBlank()) map[item.key] = item.value
-                else                       -> Unit
+                is SettingItem.CoordPicker -> {
+                    if (item.latRaw.isNotBlank()) map[item.latKey] = item.latRaw
+                    if (item.lonRaw.isNotBlank()) map[item.lonKey] = item.lonRaw
+                }
+                else -> Unit
             }
         }
         return map

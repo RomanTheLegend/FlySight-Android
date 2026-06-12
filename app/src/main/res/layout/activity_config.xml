@@ -83,7 +83,7 @@
             android:layout_width="0dp"
             android:layout_height="44dp"
             android:layout_weight="1"
-            android:text="READ"
+            android:text="BACK"
             android:textSize="14sp"
             android:layout_marginEnd="6dp" />
 
@@ -152,7 +152,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Tap READ to load the current configuration from your FlySight device."
+                android:text="Loading configuration from device…"
                 android:textSize="13sp"
                 android:textColor="@color/colorTextTertiary"
                 android:gravity="center" />
