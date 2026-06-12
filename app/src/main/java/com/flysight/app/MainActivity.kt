@@ -33,6 +33,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var ble: BleManager
     private lateinit var adapter: DeviceAdapter
+    private lateinit var adapterPaired: DeviceAdapter
 
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -50,13 +51,24 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        supportActionBar?.title = "FlySight 2 Manager"
+
         ble = (application as FlySightApp).bleManager
 
-        adapter = DeviceAdapter { device ->
+        val connectDevice: (ScannedDevice) -> Unit = { device ->
             ble.stopScan()
             binding.btnScan.text = "Scan"
             ble.connect(device.device)
         }
+
+        adapterPaired = DeviceAdapter(connectDevice)
+        binding.recyclerPaired.layoutManager = LinearLayoutManager(this)
+        binding.recyclerPaired.addItemDecoration(
+            DividerItemDecoration(this, DividerItemDecoration.VERTICAL)
+        )
+        binding.recyclerPaired.adapter = adapterPaired
+
+        adapter = DeviceAdapter(connectDevice)
 
         binding.recyclerView.layoutManager = LinearLayoutManager(this)
         binding.recyclerView.addItemDecoration(
@@ -68,7 +80,6 @@ class MainActivity : AppCompatActivity() {
             if (binding.btnScan.text == "Stop") {
                 ble.stopScan()
                 binding.btnScan.text = "Scan"
-                setStatus("Stopped")
             } else {
                 checkPermissionsAndScan()
             }
@@ -76,9 +87,13 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             ble.scannedDevices.collectLatest { devices ->
-                adapter.update(devices)
+                val paired   = devices.filter { it.isPaired }
+                val scanning = devices.filter { !it.isPaired }
+                adapterPaired.update(paired)
+                adapter.update(scanning)
+                binding.tvNoPaired.visibility = if (paired.isEmpty()) View.VISIBLE else View.GONE
                 binding.tvEmpty.visibility =
-                    if (devices.isEmpty() && binding.btnScan.text == "Stop") View.VISIBLE
+                    if (scanning.isEmpty() && binding.btnScan.text == "Stop") View.VISIBLE
                     else View.GONE
             }
         }
@@ -86,16 +101,15 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             ble.state.collectLatest { state ->
                 when (state) {
-                    BleState.Connecting  -> { showProgress(true); setStatus("Connecting…") }
-                    BleState.Bonding     -> { showProgress(true); setStatus("Bonding / discovering…") }
+                    BleState.Connecting  -> showProgress(true)
+                    BleState.Bonding     -> showProgress(true)
                     BleState.Ready       -> {
                         showProgress(false)
                         startActivity(Intent(this@MainActivity, FileBrowserActivity::class.java))
                     }
-                    BleState.Disconnected -> { showProgress(false); setStatus("Disconnected") }
+                    BleState.Disconnected -> showProgress(false)
                     is BleState.Error    -> {
                         showProgress(false)
-                        setStatus("Error: ${state.msg}")
                         Toast.makeText(this@MainActivity, state.msg, Toast.LENGTH_LONG).show()
                     }
                     else -> {}
@@ -130,11 +144,9 @@ class MainActivity : AppCompatActivity() {
     private fun startScan() {
         ble.startScan()
         binding.btnScan.text = "Stop"
-        setStatus("Scanning for FlySight 2…")
         binding.tvEmpty.visibility = View.GONE
     }
 
-    private fun setStatus(text: String) { binding.tvStatus.text = text }
     private fun showProgress(show: Boolean) {
         binding.progressBar.visibility = if (show) View.VISIBLE else View.GONE
     }
