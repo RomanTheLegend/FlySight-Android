@@ -5,7 +5,6 @@ import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -38,6 +37,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var adapter: DeviceAdapter
     private lateinit var adapterPaired: DeviceAdapter
 
+    private var connectingDevice: ScannedDevice? = null
+
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { results ->
@@ -57,8 +58,8 @@ class MainActivity : AppCompatActivity() {
         ble = (application as FlySightApp).bleManager
 
         val connectDevice: (ScannedDevice) -> Unit = { device ->
+            connectingDevice = device
             ble.stopScan()
-            binding.tvBtnScanLabel.text = LABEL_SCAN
             ble.connect(device.device)
         }
 
@@ -70,7 +71,6 @@ class MainActivity : AppCompatActivity() {
         binding.recyclerPaired.adapter = adapterPaired
 
         adapter = DeviceAdapter(connectDevice)
-
         binding.recyclerView.layoutManager = LinearLayoutManager(this)
         binding.recyclerView.addItemDecoration(
             DividerItemDecoration(this, DividerItemDecoration.VERTICAL)
@@ -80,7 +80,7 @@ class MainActivity : AppCompatActivity() {
         binding.btnScan.setOnClickListener {
             if (binding.tvBtnScanLabel.text == LABEL_STOP) {
                 ble.stopScan()
-                binding.tvBtnScanLabel.text = LABEL_SCAN
+                showScanIdle()
             } else {
                 checkPermissionsAndScan()
             }
@@ -93,24 +93,26 @@ class MainActivity : AppCompatActivity() {
                 adapterPaired.update(paired)
                 adapter.update(scanning)
                 binding.tvNoPaired.visibility = if (paired.isEmpty()) View.VISIBLE else View.GONE
-                binding.tvEmpty.visibility =
-                    if (scanning.isEmpty() && binding.tvBtnScanLabel.text == LABEL_STOP) View.VISIBLE
-                    else View.GONE
+                if (binding.panelScanActive.visibility == View.VISIBLE) {
+                    val count = scanning.size
+                    binding.tvScanCount.text = if (count > 0) "$count found" else ""
+                    binding.tvEmpty.visibility =
+                        if (scanning.isEmpty()) View.VISIBLE else View.GONE
+                }
             }
         }
 
         lifecycleScope.launch {
             ble.state.collectLatest { state ->
                 when (state) {
-                    BleState.Connecting  -> showProgress(true)
-                    BleState.Bonding     -> showProgress(true)
+                    BleState.Connecting  -> showConnecting(1)
+                    BleState.Bonding     -> showConnecting(2)
                     BleState.Ready       -> {
-                        showProgress(false)
                         startActivity(Intent(this@MainActivity, FileBrowserActivity::class.java))
                     }
-                    BleState.Disconnected -> showProgress(false)
+                    BleState.Disconnected -> showScanIdle()
                     is BleState.Error    -> {
-                        showProgress(false)
+                        showScanIdle()
                         Toast.makeText(this@MainActivity, state.msg, Toast.LENGTH_LONG).show()
                     }
                     else -> {}
@@ -122,6 +124,47 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         ble.refreshBondedDevices()
+    }
+
+    private fun showScanIdle() {
+        binding.tvBtnScanLabel.text = LABEL_SCAN
+        binding.panelScanIdle.visibility   = View.VISIBLE
+        binding.panelScanActive.visibility = View.GONE
+        binding.panelConnecting.visibility = View.GONE
+        connectingDevice = null
+    }
+
+    private fun showConnecting(step: Int) {
+        binding.panelScanIdle.visibility   = View.GONE
+        binding.panelScanActive.visibility = View.GONE
+        binding.panelConnecting.visibility = View.VISIBLE
+
+        val deviceLabel = connectingDevice?.name ?: "device"
+        binding.tvConnectDevice.text = "Connecting to $deviceLabel…"
+
+        val doneColor    = getColor(R.color.colorPrimary)
+        val activeColor  = getColor(R.color.colorDownload)
+        val pendingColor = getColor(R.color.colorTextTertiary)
+
+        fun stepColor(n: Int) = when {
+            n < step  -> doneColor
+            n == step -> activeColor
+            else      -> pendingColor
+        }
+        binding.tvStep1.setTextColor(stepColor(1))
+        binding.tvStep2.setTextColor(stepColor(2))
+        binding.tvStep3.setTextColor(stepColor(3))
+        binding.tvStep4.setTextColor(stepColor(4))
+    }
+
+    private fun startScan() {
+        ble.startScan()
+        binding.tvBtnScanLabel.text = LABEL_STOP
+        binding.panelScanIdle.visibility   = View.GONE
+        binding.panelScanActive.visibility = View.VISIBLE
+        binding.panelConnecting.visibility = View.GONE
+        binding.tvScanCount.text = ""
+        binding.tvEmpty.visibility = View.GONE
     }
 
     private fun checkPermissionsAndScan() {
@@ -141,16 +184,6 @@ class MainActivity : AppCompatActivity() {
         }
         if (missing.isEmpty()) startScan() else permissionLauncher.launch(missing.toTypedArray())
     }
-
-    private fun startScan() {
-        ble.startScan()
-        binding.tvBtnScanLabel.text = LABEL_STOP
-        binding.tvEmpty.visibility = View.GONE
-    }
-
-    private fun showProgress(show: Boolean) {
-        binding.progressBar.visibility = if (show) View.VISIBLE else View.GONE
-    }
 }
 
 class DeviceAdapter(
@@ -165,7 +198,6 @@ class DeviceAdapter(
         val tvName:    TextView = view.findViewById(R.id.tvName)
         val tvAddress: TextView = view.findViewById(R.id.tvAddress)
         val tvRssi:    TextView = view.findViewById(R.id.tvRssi)
-        val tvPairing: TextView = view.findViewById(R.id.tvPairing)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = VH(
@@ -178,20 +210,22 @@ class DeviceAdapter(
         val item = items[position]
         holder.tvName.text    = item.name
         holder.tvAddress.text = item.device.address
-        holder.tvRssi.text    = if (item.rssi != RSSI_UNKNOWN) "${item.rssi} dBm" else ""
-        when {
-            item.isPairingMode -> {
-                holder.tvPairing.text = "● PAIRING"
-                holder.tvPairing.setTextColor(Color.parseColor("#00AA44"))
-                holder.tvPairing.visibility = View.VISIBLE
-            }
-            item.isPaired -> {
-                holder.tvPairing.text = "● PAIRED"
-                holder.tvPairing.setTextColor(Color.parseColor("#4CAF50"))
-                holder.tvPairing.visibility = View.VISIBLE
-            }
-            else -> holder.tvPairing.visibility = View.GONE
+
+        if (item.rssi != RSSI_UNKNOWN) {
+            holder.tvRssi.text = "${item.rssi} dBm"
+            holder.tvRssi.visibility = View.VISIBLE
+        } else {
+            holder.tvRssi.visibility = View.GONE
         }
+
+        val ctx = holder.itemView.context
+        holder.itemView.setBackgroundColor(
+            if (item.isPairingMode && !item.isPaired)
+                ctx.getColor(R.color.colorDevicePairingBg)
+            else
+                android.graphics.Color.TRANSPARENT
+        )
+
         holder.itemView.setOnClickListener { onClick(item) }
     }
 }

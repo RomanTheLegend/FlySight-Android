@@ -26,6 +26,7 @@
     <color name="colorIconFileBg">#2E2E2E</color>
     <color name="colorChipBg">#3A3A3A</color>
     <color name="colorDisconnectBg">#1F0808</color>
+    <color name="colorDevicePairingBg">#1E2D0A</color>
 
     <color name="colorDownload">#64CCC5</color>
     <color name="colorBtConnect">#7AB8F5</color>

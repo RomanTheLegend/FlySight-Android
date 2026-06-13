@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="44dp"
+    android:height="44dp"
+    android:viewportWidth="44"
+    android:viewportHeight="44">
+
+    <!-- Base circle -->
+    <path android:pathData="M 2 22 A 20 20 0 0 0 42 22 A 20 20 0 0 0 2 22 Z" android:fillColor="#3A3A3A" />
+    <!-- Right half — lime -->
+    <path android:pathData="M 22 2 A 20 20 0 0 1 42 22 A 20 20 0 0 1 22 42 L 22 22 Z" android:fillColor="#A8D830" />
+    <!-- Left half — gray -->
+    <path android:pathData="M 22 2 A 20 20 0 0 0 2 22 A 20 20 0 0 0 22 42 L 22 22 Z" android:fillColor="#787878" />
+    <!-- Outer stroke -->
+    <path android:pathData="M 2 22 A 20 20 0 0 0 42 22 A 20 20 0 0 0 2 22 Z" android:fillColor="#00000000" android:strokeColor="#252525" android:strokeWidth="2" />
+
+    <!-- Folder back panel (tab) -->
+    <path android:pathData="M 12 17 C 12 15.9 12.9 15 14 15 L 19.5 15 L 21.5 13 L 30 13 C 31.1 13 32 13.9 32 15 L 32 17 Z" android:fillColor="#8CFFFFFF" />
+    <!-- Folder front panel -->
+    <path android:pathData="M 14 17 L 30 17 Q 32 17 32 19 L 32 29 Q 32 31 30 31 L 14 31 Q 12 31 12 29 L 12 19 Q 12 17 14 17 Z" android:fillColor="#FFFFFF" />
+
+</vector>

@@ -12,20 +12,12 @@
     android:clickable="true"
     android:focusable="true">
 
-    <FrameLayout
-        android:id="@+id/iconBg"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:layout_marginEnd="12dp">
-
-        <TextView
-            android:id="@+id/tvIcon"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:textSize="20sp" />
-
-    </FrameLayout>
+    <ImageView
+        android:id="@+id/ivIcon"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:scaleType="fitCenter"
+        android:layout_marginEnd="12dp" />
 
     <TextView
         android:id="@+id/tvName"

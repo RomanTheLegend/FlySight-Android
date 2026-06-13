@@ -118,86 +118,208 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
+                    android:orientation="vertical">
 
-                    <TextView
-                        android:id="@+id/tvHint"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Turn off your FlySight and press the Power button twice to enter pairing mode. The green LED will start pulsing."
-                        android:textSize="13sp"
-                        android:textColor="@color/colorTextSecondary"
-                        android:paddingBottom="14dp" />
-
+                    <!-- IDLE: instruction hint + scan button -->
                     <LinearLayout
-                        android:id="@+id/btnScan"
+                        android:id="@+id/panelScanIdle"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:background="@drawable/bg_btn_action"
-                        android:padding="10dp"
-                        android:clickable="true"
-                        android:focusable="true">
+                        android:orientation="vertical"
+                        android:padding="16dp">
 
-                        <ImageView
-                            android:layout_width="44dp"
-                            android:layout_height="44dp"
-                            android:src="@drawable/ic_scan"
-                            android:scaleType="fitCenter"
-                            android:layout_marginEnd="12dp" />
+                        <TextView
+                            android:id="@+id/tvHint"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Turn off your FlySight and press the Power button twice to enter pairing mode. The green LED will start pulsing."
+                            android:textSize="13sp"
+                            android:textColor="@color/colorTextSecondary"
+                            android:paddingBottom="14dp" />
 
                         <LinearLayout
-                            android:layout_width="0dp"
+                            android:id="@+id/btnScan"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical">
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:background="@drawable/bg_btn_action"
+                            android:padding="10dp"
+                            android:clickable="true"
+                            android:focusable="true">
 
-                            <TextView
-                                android:id="@+id/tvBtnScanLabel"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Scan for devices"
-                                android:textSize="15sp"
-                                android:textStyle="bold"
-                                android:textColor="@color/colorTextPrimary" />
+                            <ImageView
+                                android:layout_width="44dp"
+                                android:layout_height="44dp"
+                                android:src="@drawable/ic_scan"
+                                android:scaleType="fitCenter"
+                                android:layout_marginEnd="12dp" />
 
-                            <TextView
-                                android:layout_width="wrap_content"
+                            <LinearLayout
+                                android:layout_width="0dp"
                                 android:layout_height="wrap_content"
-                                android:text="Find FlySights in pairing mode"
-                                android:textSize="12sp"
-                                android:textColor="@color/colorTextSecondary" />
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:id="@+id/tvBtnScanLabel"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Scan for devices"
+                                    android:textSize="15sp"
+                                    android:textStyle="bold"
+                                    android:textColor="@color/colorTextPrimary" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Find FlySights in pairing mode"
+                                    android:textSize="12sp"
+                                    android:textColor="@color/colorTextSecondary" />
+
+                            </LinearLayout>
 
                         </LinearLayout>
 
                     </LinearLayout>
 
-                    <ProgressBar
-                        android:id="@+id/progressBar"
-                        style="?android:attr/progressBarStyleSmall"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="center_horizontal"
-                        android:layout_marginTop="10dp"
-                        android:visibility="gone" />
-
-                    <TextView
-                        android:id="@+id/tvEmpty"
+                    <!-- SCANNING: status row + thin progress bar + results -->
+                    <LinearLayout
+                        android:id="@+id/panelScanActive"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="No FlySight 2 devices found.\nMake sure the device is powered on."
-                        android:textColor="@color/colorTextSecondary"
-                        android:gravity="center"
-                        android:paddingTop="8dp"
-                        android:visibility="gone" />
+                        android:orientation="vertical"
+                        android:visibility="gone">
 
-                    <androidx.recyclerview.widget.RecyclerView
-                        android:id="@+id/recyclerView"
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:paddingStart="16dp"
+                            android:paddingEnd="16dp"
+                            android:paddingTop="12dp"
+                            android:paddingBottom="10dp">
+
+                            <TextView
+                                android:id="@+id/tvScanStatus"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Scanning for devices…"
+                                android:textSize="13sp"
+                                android:textColor="@color/colorTextSecondary" />
+
+                            <TextView
+                                android:id="@+id/tvScanCount"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textSize="13sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/colorPrimary" />
+
+                        </LinearLayout>
+
+                        <ProgressBar
+                            android:id="@+id/progressBar"
+                            style="?android:attr/progressBarStyleHorizontal"
+                            android:layout_width="match_parent"
+                            android:layout_height="2dp"
+                            android:indeterminate="true"
+                            android:indeterminateTint="@color/colorPrimary"
+                            android:visibility="visible" />
+
+                        <TextView
+                            android:id="@+id/tvEmpty"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="No FlySight 2 devices found.\nMake sure the device is powered on."
+                            android:textColor="@color/colorTextSecondary"
+                            android:gravity="center"
+                            android:paddingStart="16dp"
+                            android:paddingEnd="16dp"
+                            android:paddingTop="12dp"
+                            android:paddingBottom="12dp"
+                            android:visibility="gone" />
+
+                        <androidx.recyclerview.widget.RecyclerView
+                            android:id="@+id/recyclerView"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:nestedScrollingEnabled="false" />
+
+                    </LinearLayout>
+
+                    <!-- CONNECTING: steps panel -->
+                    <LinearLayout
+                        android:id="@+id/panelConnecting"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:nestedScrollingEnabled="false" />
+                        android:orientation="vertical"
+                        android:paddingStart="16dp"
+                        android:paddingEnd="16dp"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:id="@+id/tvConnectDevice"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:textSize="13sp"
+                            android:textColor="@color/colorTextSecondary"
+                            android:paddingTop="12dp"
+                            android:paddingBottom="10dp" />
+
+                        <ProgressBar
+                            android:id="@+id/progressBarConnect"
+                            style="?android:attr/progressBarStyleHorizontal"
+                            android:layout_width="match_parent"
+                            android:layout_height="2dp"
+                            android:indeterminate="true"
+                            android:indeterminateTint="@color/colorDownload"
+                            android:layout_marginStart="-16dp"
+                            android:layout_marginEnd="-16dp" />
+
+                        <TextView
+                            android:id="@+id/tvStep1"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="● Pairing handshake"
+                            android:textSize="13sp"
+                            android:paddingTop="12dp"
+                            android:paddingBottom="4dp"
+                            android:textColor="@color/colorTextTertiary" />
+
+                        <TextView
+                            android:id="@+id/tvStep2"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="● Authenticating"
+                            android:textSize="13sp"
+                            android:paddingTop="4dp"
+                            android:paddingBottom="4dp"
+                            android:textColor="@color/colorTextTertiary" />
+
+                        <TextView
+                            android:id="@+id/tvStep3"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="● Syncing device info…"
+                            android:textSize="13sp"
+                            android:paddingTop="4dp"
+                            android:paddingBottom="4dp"
+                            android:textColor="@color/colorTextTertiary" />
+
+                        <TextView
+                            android:id="@+id/tvStep4"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="● Ready"
+                            android:textSize="13sp"
+                            android:paddingTop="4dp"
+                            android:paddingBottom="16dp"
+                            android:textColor="@color/colorTextTertiary" />
+
+                    </LinearLayout>
 
                 </LinearLayout>
 

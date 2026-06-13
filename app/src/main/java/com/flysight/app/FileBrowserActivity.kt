@@ -6,7 +6,7 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.PopupMenu
 import android.widget.ProgressBar
@@ -244,11 +244,10 @@ class FileListAdapter(
     }
 
     inner class EntryVH(view: View) : RecyclerView.ViewHolder(view) {
-        val tvName:    TextView    = view.findViewById(R.id.tvName)
-        val tvMeta:    TextView    = view.findViewById(R.id.tvMeta)
-        val tvChevron: TextView    = view.findViewById(R.id.tvChevron)
-        val tvIcon:    TextView    = view.findViewById(R.id.tvIcon)
-        val iconBg:    FrameLayout = view.findViewById(R.id.iconBg)
+        val tvName:    TextView  = view.findViewById(R.id.tvName)
+        val tvMeta:    TextView  = view.findViewById(R.id.tvMeta)
+        val tvChevron: TextView  = view.findViewById(R.id.tvChevron)
+        val ivIcon:    ImageView = view.findViewById(R.id.ivIcon)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
@@ -273,20 +272,16 @@ class FileListAdapter(
         if (entry.isDirectory) {
             holder.tvChevron.visibility = View.VISIBLE
             holder.tvMeta.visibility    = View.GONE
-            holder.iconBg.setBackgroundResource(R.drawable.bg_icon_folder)
-            holder.tvIcon.text = when {
-                entry.name.equals("AUDIO", ignoreCase = true) -> "♪"
-                entry.name.equals("TEMP",  ignoreCase = true) -> "⏱"
-                else -> "📁"
-            }
-            holder.tvName.setTextColor(androidx.core.content.ContextCompat.getColor(holder.itemView.context, R.color.colorTextPrimary))
+            holder.ivIcon.setImageResource(when {
+                entry.name.equals("AUDIO", ignoreCase = true) -> R.drawable.ic_folder_audio
+                entry.name.equals("TEMP",  ignoreCase = true) -> R.drawable.ic_folder_temp
+                else                                           -> R.drawable.ic_folder
+            })
         } else {
             holder.tvChevron.visibility = View.GONE
             holder.tvMeta.text          = formatSize(entry.size)
             holder.tvMeta.visibility    = View.VISIBLE
-            holder.iconBg.setBackgroundResource(R.drawable.bg_icon_file)
-            holder.tvIcon.text = "⚙"
-            holder.tvName.setTextColor(androidx.core.content.ContextCompat.getColor(holder.itemView.context, R.color.colorTextPrimary))
+            holder.ivIcon.setImageResource(R.drawable.ic_file_config)
         }
         holder.itemView.setOnClickListener { onClick(entry) }
         if (entry.isDirectory && onLongClick != null) {

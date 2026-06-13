@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="44dp"
+    android:height="44dp"
+    android:viewportWidth="44"
+    android:viewportHeight="44">
+
+    <!-- Base circle — blue tint -->
+    <path android:pathData="M 2 22 A 20 20 0 0 0 42 22 A 20 20 0 0 0 2 22 Z" android:fillColor="#2A3545" />
+    <!-- Right half — config blue -->
+    <path android:pathData="M 22 2 A 20 20 0 0 1 42 22 A 20 20 0 0 1 22 42 L 22 22 Z" android:fillColor="#5B8CCC" />
+    <!-- Left half — gray -->
+    <path android:pathData="M 22 2 A 20 20 0 0 0 2 22 A 20 20 0 0 0 22 42 L 22 22 Z" android:fillColor="#787878" />
+    <!-- Outer stroke -->
+    <path android:pathData="M 2 22 A 20 20 0 0 0 42 22 A 20 20 0 0 0 2 22 Z" android:fillColor="#00000000" android:strokeColor="#1A2535" android:strokeWidth="2" />
+
+    <!-- Gear body ring r=3.8 -->
+    <path android:pathData="M 18.2 22 A 3.8 3.8 0 0 0 25.8 22 A 3.8 3.8 0 0 0 18.2 22 Z" android:fillColor="#00000000" android:strokeColor="#FFFFFF" android:strokeWidth="2" />
+
+    <!-- Gear teeth — top -->
+    <path android:pathData="M 22 13.5 L 22 16.5" android:fillColor="#00000000" android:strokeColor="#FFFFFF" android:strokeWidth="2" android:strokeLineCap="round" />
+    <!-- Gear teeth — bottom -->
+    <path android:pathData="M 22 27.5 L 22 30.5" android:fillColor="#00000000" android:strokeColor="#FFFFFF" android:strokeWidth="2" android:strokeLineCap="round" />
+    <!-- Gear teeth — left -->
+    <path android:pathData="M 13.5 22 L 16.5 22" android:fillColor="#00000000" android:strokeColor="#FFFFFF" android:strokeWidth="2" android:strokeLineCap="round" />
+    <!-- Gear teeth — right -->
+    <path android:pathData="M 27.5 22 L 30.5 22" android:fillColor="#00000000" android:strokeColor="#FFFFFF" android:strokeWidth="2" android:strokeLineCap="round" />
+    <!-- Gear teeth — top-left -->
+    <path android:pathData="M 15.55 15.55 L 17.67 17.67" android:fillColor="#00000000" android:strokeColor="#FFFFFF" android:strokeWidth="2" android:strokeLineCap="round" />
+    <!-- Gear teeth — bottom-right -->
+    <path android:pathData="M 26.33 26.33 L 28.45 28.45" android:fillColor="#00000000" android:strokeColor="#FFFFFF" android:strokeWidth="2" android:strokeLineCap="round" />
+    <!-- Gear teeth — top-right -->
+    <path android:pathData="M 28.45 15.55 L 26.33 17.67" android:fillColor="#00000000" android:strokeColor="#FFFFFF" android:strokeWidth="2" android:strokeLineCap="round" />
+    <!-- Gear teeth — bottom-left -->
+    <path android:pathData="M 17.67 26.33 L 15.55 28.45" android:fillColor="#00000000" android:strokeColor="#FFFFFF" android:strokeWidth="2" android:strokeLineCap="round" />
+
+</vector>
