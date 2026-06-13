@@ -86,6 +86,22 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        binding.btnViewTrack.setOnClickListener {
+            startActivity(Intent(this, FileBrowserActivity::class.java))
+        }
+        binding.btnScoreTrack.setOnClickListener {
+            Toast.makeText(this, "Score track — coming soon", Toast.LENGTH_SHORT).show()
+        }
+        binding.btnCompareTracks.setOnClickListener {
+            Toast.makeText(this, "Compare tracks — coming soon", Toast.LENGTH_SHORT).show()
+        }
+        binding.btnSettings.setOnClickListener {
+            startActivity(Intent(this, ConfigActivity::class.java))
+        }
+        binding.btnDisconnect.setOnClickListener {
+            ble.disconnect()
+        }
+
         lifecycleScope.launch {
             ble.scannedDevices.collectLatest { devices ->
                 val paired   = devices.filter { it.isPaired }
@@ -103,16 +119,23 @@ class MainActivity : AppCompatActivity() {
         }
 
         lifecycleScope.launch {
+            ble.batteryLevel.collectLatest { level ->
+                if (level >= 0) {
+                    binding.tvBatteryPct.text = "$level%"
+                    binding.batteryProgress.progress = level
+                }
+            }
+        }
+
+        lifecycleScope.launch {
             ble.state.collectLatest { state ->
                 when (state) {
-                    BleState.Connecting  -> showConnecting(1)
-                    BleState.Bonding     -> showConnecting(2)
-                    BleState.Ready       -> {
-                        startActivity(Intent(this@MainActivity, FileBrowserActivity::class.java))
-                    }
-                    BleState.Disconnected -> showScanIdle()
-                    is BleState.Error    -> {
-                        showScanIdle()
+                    BleState.Connecting   -> showConnecting(1)
+                    BleState.Bonding      -> showConnecting(2)
+                    BleState.Ready        -> showReady()
+                    BleState.Disconnected -> showDisconnected()
+                    is BleState.Error     -> {
+                        showDisconnected()
                         Toast.makeText(this@MainActivity, state.msg, Toast.LENGTH_LONG).show()
                     }
                     else -> {}
@@ -126,23 +149,27 @@ class MainActivity : AppCompatActivity() {
         ble.refreshBondedDevices()
     }
 
-    private fun showScanIdle() {
-        binding.tvBtnScanLabel.text = LABEL_SCAN
-        binding.tvSectionAddDevice.visibility = View.VISIBLE
-        binding.panelScanIdle.visibility      = View.VISIBLE
-        binding.panelScanActive.visibility    = View.GONE
-        binding.panelConnecting.visibility    = View.GONE
-        connectingDevice = null
+    private fun showReady() {
+        binding.tvDeviceName.text = connectingDevice?.name ?: "FlySight"
+        binding.tvDeviceMac.text  = connectingDevice?.device?.address ?: ""
+
+        binding.panelDeviceReady.visibility      = View.VISIBLE
+        binding.panelDeviceConnecting.visibility = View.GONE
+        binding.panelDeviceList.visibility       = View.GONE
+        binding.sectionActions.visibility        = View.VISIBLE
+        binding.btnDisconnect.visibility         = View.VISIBLE
+
+        showScanIdle()
     }
 
     private fun showConnecting(step: Int) {
-        binding.tvSectionAddDevice.visibility = View.INVISIBLE
-        binding.panelScanIdle.visibility      = View.GONE
-        binding.panelScanActive.visibility    = View.GONE
-        binding.panelConnecting.visibility    = View.VISIBLE
+        binding.panelDeviceReady.visibility      = View.GONE
+        binding.panelDeviceConnecting.visibility = View.VISIBLE
+        binding.panelDeviceList.visibility       = View.GONE
+        binding.sectionActions.visibility        = View.GONE
+        binding.btnDisconnect.visibility         = View.GONE
 
-        val deviceLabel = connectingDevice?.name ?: "device"
-        binding.tvConnectDevice.text = "Connecting to $deviceLabel…"
+        binding.tvConnectDevice.text = "Connecting to ${connectingDevice?.name ?: "device"}…"
 
         val doneColor    = getColor(R.color.colorPrimary)
         val activeColor  = getColor(R.color.colorDownload)
@@ -159,15 +186,30 @@ class MainActivity : AppCompatActivity() {
         binding.tvStep4.setTextColor(stepColor(4))
     }
 
+    private fun showDisconnected() {
+        ble.stopScan()
+        binding.panelDeviceReady.visibility      = View.GONE
+        binding.panelDeviceConnecting.visibility = View.GONE
+        binding.panelDeviceList.visibility       = View.VISIBLE
+        binding.sectionActions.visibility        = View.GONE
+        binding.btnDisconnect.visibility         = View.GONE
+        connectingDevice = null
+        showScanIdle()
+    }
+
+    private fun showScanIdle() {
+        binding.tvBtnScanLabel.text        = LABEL_SCAN
+        binding.panelScanIdle.visibility   = View.VISIBLE
+        binding.panelScanActive.visibility = View.GONE
+    }
+
     private fun startScan() {
         ble.startScan()
-        binding.tvBtnScanLabel.text = LABEL_STOP
-        binding.tvSectionAddDevice.visibility = View.VISIBLE
-        binding.panelScanIdle.visibility      = View.GONE
-        binding.panelScanActive.visibility    = View.VISIBLE
-        binding.panelConnecting.visibility    = View.GONE
-        binding.tvScanCount.text = ""
-        binding.tvEmpty.visibility = View.GONE
+        binding.tvBtnScanLabel.text        = LABEL_STOP
+        binding.panelScanIdle.visibility   = View.GONE
+        binding.panelScanActive.visibility = View.VISIBLE
+        binding.tvScanCount.text           = ""
+        binding.tvEmpty.visibility         = View.GONE
     }
 
     private fun checkPermissionsAndScan() {

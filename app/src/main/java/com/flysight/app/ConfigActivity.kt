@@ -42,10 +42,6 @@ class ConfigActivity : AppCompatActivity() {
         binding.btnHeaderBack.setOnClickListener { finish() }
         binding.recyclerSettings.layoutManager = LinearLayoutManager(this)
         binding.btnSave.setOnClickListener { saveConfig() }
-        binding.btnDisconnect.setOnClickListener {
-            ble.disconnect()
-            finish()
-        }
 
         mapPickerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == RESULT_OK) {
@@ -180,9 +176,6 @@ class ConfigActivity : AppCompatActivity() {
         val saveEnabled = !loading && settingsItems.isNotEmpty()
         binding.btnSave.isEnabled = saveEnabled
         binding.btnSave.alpha = if (saveEnabled) 1f else 0.4f
-        val disconnectEnabled = !loading
-        binding.btnDisconnect.isEnabled = disconnectEnabled
-        binding.btnDisconnect.alpha = if (disconnectEnabled) 1f else 0.4f
     }
 
     private fun setStatus(text: String) { binding.tvStatus.text = text }

@@ -93,6 +93,17 @@
             android:layout_height="wrap_content"
             android:visibility="gone" />
 
+        <ImageView
+            android:id="@+id/btnDisconnect"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:src="@drawable/ic_disconnect"
+            android:scaleType="fitCenter"
+            android:layout_marginStart="4dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackgroundBorderless" />
+
     </LinearLayout>
 
     <!-- File list card -->
@@ -133,50 +144,5 @@
 
     </com.google.android.material.card.MaterialCardView>
 
-    <!-- Disconnect -->
-    <LinearLayout
-        android:id="@+id/btnDisconnect"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:layout_marginBottom="12dp"
-        android:orientation="horizontal"
-        android:gravity="center"
-        android:background="@drawable/bg_btn_danger"
-        android:padding="10dp"
-        android:clickable="true"
-        android:focusable="true">
-
-        <ImageView
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:src="@drawable/ic_disconnect"
-            android:scaleType="fitCenter"
-            android:layout_marginEnd="12dp" />
-
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="vertical">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Disconnect"
-                android:textSize="15sp"
-                android:textStyle="bold"
-                android:textColor="@color/colorTextPrimary" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="End current session"
-                android:textSize="12sp"
-                android:textColor="@color/colorTextSecondary" />
-
-        </LinearLayout>
-
-    </LinearLayout>
 
 </LinearLayout>

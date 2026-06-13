@@ -58,7 +58,6 @@ class FileBrowserActivity : AppCompatActivity() {
                     pathStack.removeLast()
                     loadDirectory(ble)
                 } else {
-                    ble.disconnect()
                     finish()
                 }
             }
@@ -170,7 +169,7 @@ class FileBrowserActivity : AppCompatActivity() {
 
     private fun loadDirectory(ble: com.flysight.app.ble.BleManager) {
         binding.tvPath.text = if (currentPath.isEmpty()) "/ root" else "/$currentPath"
-        binding.btnHeaderBack.visibility = if (pathStack.size > 1) View.VISIBLE else View.GONE
+        binding.btnHeaderBack.visibility = View.VISIBLE
         binding.tvEmpty.visibility = View.GONE
         setLoading(true)
 

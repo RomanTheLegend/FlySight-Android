@@ -52,6 +52,10 @@ class FileViewActivity : AppCompatActivity() {
         binding.tvSubtitle.text = "Jump recording"
 
         binding.btnHeaderBack.setOnClickListener { finish() }
+        binding.btnDisconnect.setOnClickListener {
+            (application as FlySightApp).bleManager.disconnect()
+            finish()
+        }
 
         lifecycleScope.launch {
             viewModel.loadState.collectLatest { state ->
