@@ -17,24 +17,16 @@
         android:paddingTop="24dp"
         android:paddingBottom="12dp">
 
-        <FrameLayout
+        <ImageView
             android:id="@+id/btnHeaderBack"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:background="@drawable/bg_back_btn"
-            android:layout_marginEnd="12dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_back"
+            android:scaleType="center"
+            android:layout_marginEnd="4dp"
             android:clickable="true"
-            android:focusable="true">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:text="←"
-                android:textSize="16sp"
-                android:textColor="@color/colorIconText" />
-
-        </FrameLayout>
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackgroundBorderless" />
 
         <LinearLayout
             android:layout_width="0dp"
@@ -163,7 +155,7 @@
                     android:text="—"
                     android:textSize="22sp"
                     android:textStyle="bold"
-                    android:textColor="#FF9800" />
+                    android:textColor="@color/colorChartElevation" />
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -193,7 +185,7 @@
                     android:text="—"
                     android:textSize="22sp"
                     android:textStyle="bold"
-                    android:textColor="#2196F3" />
+                    android:textColor="@color/colorChartHSpeed" />
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -223,7 +215,7 @@
                     android:text="—"
                     android:textSize="22sp"
                     android:textStyle="bold"
-                    android:textColor="#F44336" />
+                    android:textColor="@color/colorChartVSpeed" />
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -253,7 +245,7 @@
                     android:text="—"
                     android:textSize="22sp"
                     android:textStyle="bold"
-                    android:textColor="#4CAF50" />
+                    android:textColor="@color/colorChartTotalSpeed" />
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"

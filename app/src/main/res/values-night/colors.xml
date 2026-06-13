@@ -1,28 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Brand — lighter for dark backgrounds -->
-    <color name="colorPrimary">#5B8DEF</color>
-    <color name="colorPrimaryDark">#3A6ED4</color>
-    <color name="colorGreen">#4DB6AC</color>
-    <color name="colorDisconnect">#EF5350</color>
+    <!-- Hex Wing Design System v1.0 — always dark -->
+    <color name="colorPrimary">#A8D830</color>
+    <color name="colorPrimaryDark">#7AB8F5</color>
+    <color name="colorAccent">#A8D830</color>
+    <color name="colorGreen">#A8D830</color>
+    <color name="colorDanger">#CC3333</color>
+    <color name="colorDisconnect">#CC3333</color>
 
-    <!-- Surfaces -->
     <color name="colorBackground">#1A1A1A</color>
-    <color name="colorSurface">#252525</color>
+    <color name="colorSurface">#2E2E2E</color>
+    <color name="colorElevated">#3A3A3A</color>
+    <color name="colorStroke">#252525</color>
 
-    <!-- Text -->
-    <color name="colorTextPrimary">#E8E8E8</color>
-    <color name="colorTextSecondary">#909090</color>
+    <color name="colorTextPrimary">#FFFFFF</color>
+    <color name="colorTextSecondary">#AAAAAA</color>
     <color name="colorTextTertiary">#666666</color>
-    <color name="colorSettingLabel">#BEBEBE</color>
-    <color name="colorIconText">#D0D0D0</color>
-    <color name="colorEmptyState">#555555</color>
-    <color name="colorChevron">#555555</color>
+    <color name="colorSettingLabel">#FFFFFF</color>
+    <color name="colorIconText">#FFFFFF</color>
+    <color name="colorEmptyState">#AAAAAA</color>
+    <color name="colorChevron">#666666</color>
 
-    <!-- UI element backgrounds -->
     <color name="colorBackBtn">#3A3A3A</color>
-    <color name="colorIconFolderBg">#2C2508</color>
-    <color name="colorIconFileBg">#0A1C2A</color>
-    <color name="colorChipBg">#0D1A40</color>
-    <color name="colorDisconnectBg">#2A0808</color>
+    <color name="colorIconFolderBg">#2E2E2E</color>
+    <color name="colorIconFileBg">#2E2E2E</color>
+    <color name="colorChipBg">#3A3A3A</color>
+    <color name="colorDisconnectBg">#1F0808</color>
+
+    <color name="colorDownload">#64CCC5</color>
+    <color name="colorBtConnect">#7AB8F5</color>
+
+    <color name="colorChartHSpeed">#5B8CCC</color>
+    <color name="colorChartVSpeed">#CC5555</color>
+    <color name="colorChartTotalSpeed">#55CC88</color>
+    <color name="colorChartElevation">#E8A020</color>
+
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
 </resources>

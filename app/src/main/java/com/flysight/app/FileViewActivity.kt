@@ -176,10 +176,10 @@ class FileViewActivity : AppCompatActivity() {
             totE.add(Entry(t,  p.totalSpeed.toFloat()))
         }
 
-        val colorElev   = Color.parseColor("#FF9800")
-        val colorHSpeed = Color.parseColor("#2196F3")
-        val colorVSpeed = Color.parseColor("#F44336")
-        val colorTotal  = Color.parseColor("#4CAF50")
+        val colorElev   = Color.parseColor("#E8A020")
+        val colorHSpeed = Color.parseColor("#5B8CCC")
+        val colorVSpeed = Color.parseColor("#CC5555")
+        val colorTotal  = Color.parseColor("#55CC88")
 
         fun set(entries: ArrayList<Entry>, label: String, color: Int, axis: YAxis.AxisDependency) =
             LineDataSet(entries, label).apply {

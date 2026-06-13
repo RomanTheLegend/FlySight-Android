@@ -17,24 +17,16 @@
         android:paddingTop="24dp"
         android:paddingBottom="12dp">
 
-        <FrameLayout
+        <ImageView
             android:id="@+id/btnHeaderBack"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:background="@drawable/bg_back_btn"
-            android:layout_marginEnd="12dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_back"
+            android:scaleType="center"
+            android:layout_marginEnd="4dp"
             android:clickable="true"
-            android:focusable="true">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:text="←"
-                android:textSize="16sp"
-                android:textColor="@color/colorIconText" />
-
-        </FrameLayout>
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackgroundBorderless" />
 
         <LinearLayout
             android:layout_width="0dp"
@@ -110,17 +102,50 @@
     </com.google.android.material.card.MaterialCardView>
 
     <!-- Disconnect -->
-    <TextView
+    <LinearLayout
         android:id="@+id/btnDisconnect"
         android:layout_width="match_parent"
-        android:layout_height="52dp"
-        android:background="@drawable/bg_disconnect"
-        android:text="Disconnect"
-        android:textColor="@color/colorDisconnect"
-        android:textSize="15sp"
-        android:textStyle="bold"
-        android:gravity="center"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="12dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@drawable/bg_btn_danger"
+        android:padding="10dp"
         android:clickable="true"
-        android:focusable="true" />
+        android:focusable="true">
+
+        <ImageView
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:src="@drawable/ic_disconnect"
+            android:scaleType="fitCenter"
+            android:layout_marginEnd="12dp" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Disconnect"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:textColor="@color/colorTextPrimary" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="End current session"
+                android:textSize="12sp"
+                android:textColor="@color/colorTextSecondary" />
+
+        </LinearLayout>
+
+    </LinearLayout>
 
 </LinearLayout>

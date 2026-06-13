@@ -50,7 +50,7 @@
                 android:text="MY DEVICES"
                 android:textSize="11sp"
                 android:textStyle="bold"
-                android:textColor="@color/colorTextSecondary"
+                android:textColor="@color/colorTextTertiary"
                 android:letterSpacing="0.1"
                 android:paddingStart="20dp"
                 android:paddingEnd="20dp"
@@ -64,7 +64,8 @@
                 android:layout_marginEnd="16dp"
                 app:cardCornerRadius="12dp"
                 app:cardElevation="1dp"
-                app:strokeWidth="0dp">
+                app:strokeWidth="0dp"
+                app:cardBackgroundColor="@color/colorSurface">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -97,7 +98,7 @@
                 android:text="ADD NEW DEVICE"
                 android:textSize="11sp"
                 android:textStyle="bold"
-                android:textColor="@color/colorTextSecondary"
+                android:textColor="@color/colorTextTertiary"
                 android:letterSpacing="0.1"
                 android:paddingStart="20dp"
                 android:paddingEnd="20dp"
@@ -111,7 +112,8 @@
                 android:layout_marginEnd="16dp"
                 app:cardCornerRadius="12dp"
                 app:cardElevation="1dp"
-                app:strokeWidth="0dp">
+                app:strokeWidth="0dp"
+                app:cardBackgroundColor="@color/colorSurface">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -128,13 +130,49 @@
                         android:textColor="@color/colorTextSecondary"
                         android:paddingBottom="14dp" />
 
-                    <Button
+                    <LinearLayout
                         android:id="@+id/btnScan"
                         android:layout_width="match_parent"
-                        android:layout_height="48dp"
-                        android:text="SCAN FOR DEVICES"
-                        android:textSize="14sp"
-                        android:letterSpacing="0.05" />
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:background="@drawable/bg_btn_action"
+                        android:padding="10dp"
+                        android:clickable="true"
+                        android:focusable="true">
+
+                        <ImageView
+                            android:layout_width="44dp"
+                            android:layout_height="44dp"
+                            android:src="@drawable/ic_scan"
+                            android:scaleType="fitCenter"
+                            android:layout_marginEnd="12dp" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/tvBtnScanLabel"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Scan for devices"
+                                android:textSize="15sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/colorTextPrimary" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Find FlySights in pairing mode"
+                                android:textSize="12sp"
+                                android:textColor="@color/colorTextSecondary" />
+
+                        </LinearLayout>
+
+                    </LinearLayout>
 
                     <ProgressBar
                         android:id="@+id/progressBar"

@@ -41,7 +41,6 @@ class ConfigActivity : AppCompatActivity() {
 
         binding.btnHeaderBack.setOnClickListener { finish() }
         binding.recyclerSettings.layoutManager = LinearLayoutManager(this)
-        binding.btnRead.setOnClickListener { finish() }
         binding.btnSave.setOnClickListener { saveConfig() }
         binding.btnDisconnect.setOnClickListener {
             ble.disconnect()
@@ -178,9 +177,12 @@ class ConfigActivity : AppCompatActivity() {
             binding.progressBar.isIndeterminate = true
             binding.tvProgressBytes.visibility = View.GONE
         }
-        binding.btnRead.isEnabled       = !loading
-        binding.btnSave.isEnabled       = !loading && settingsItems.isNotEmpty()
-        binding.btnDisconnect.isEnabled = !loading
+        val saveEnabled = !loading && settingsItems.isNotEmpty()
+        binding.btnSave.isEnabled = saveEnabled
+        binding.btnSave.alpha = if (saveEnabled) 1f else 0.4f
+        val disconnectEnabled = !loading
+        binding.btnDisconnect.isEnabled = disconnectEnabled
+        binding.btnDisconnect.alpha = if (disconnectEnabled) 1f else 0.4f
     }
 
     private fun setStatus(text: String) { binding.tvStatus.text = text }

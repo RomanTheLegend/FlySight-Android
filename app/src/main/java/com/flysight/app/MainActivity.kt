@@ -28,6 +28,9 @@ import com.flysight.app.databinding.ActivityMainBinding
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
+private const val LABEL_SCAN = "Scan for devices"
+private const val LABEL_STOP = "Stop scanning"
+
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
@@ -55,7 +58,7 @@ class MainActivity : AppCompatActivity() {
 
         val connectDevice: (ScannedDevice) -> Unit = { device ->
             ble.stopScan()
-            binding.btnScan.text = "Scan"
+            binding.tvBtnScanLabel.text = LABEL_SCAN
             ble.connect(device.device)
         }
 
@@ -75,9 +78,9 @@ class MainActivity : AppCompatActivity() {
         binding.recyclerView.adapter = adapter
 
         binding.btnScan.setOnClickListener {
-            if (binding.btnScan.text == "Stop") {
+            if (binding.tvBtnScanLabel.text == LABEL_STOP) {
                 ble.stopScan()
-                binding.btnScan.text = "Scan"
+                binding.tvBtnScanLabel.text = LABEL_SCAN
             } else {
                 checkPermissionsAndScan()
             }
@@ -91,7 +94,7 @@ class MainActivity : AppCompatActivity() {
                 adapter.update(scanning)
                 binding.tvNoPaired.visibility = if (paired.isEmpty()) View.VISIBLE else View.GONE
                 binding.tvEmpty.visibility =
-                    if (scanning.isEmpty() && binding.btnScan.text == "Stop") View.VISIBLE
+                    if (scanning.isEmpty() && binding.tvBtnScanLabel.text == LABEL_STOP) View.VISIBLE
                     else View.GONE
             }
         }
@@ -141,7 +144,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun startScan() {
         ble.startScan()
-        binding.btnScan.text = "Stop"
+        binding.tvBtnScanLabel.text = LABEL_STOP
         binding.tvEmpty.visibility = View.GONE
     }
 
