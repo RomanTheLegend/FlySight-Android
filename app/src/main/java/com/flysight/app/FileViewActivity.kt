@@ -132,6 +132,18 @@ class FileViewActivity : AppCompatActivity() {
             set(elevE, "Elevation (m)",      colorElev,   YAxis.AxisDependency.RIGHT)
         )
 
+        // Lock axis ranges so toggling series visibility never rescales the chart
+        val leftMax = (points.maxOf { maxOf(it.hSpeed, it.vSpeed, it.totalSpeed,
+            it.glideRatio.coerceAtLeast(0.0)) }.coerceAtLeast(1.0) * 1.1).toFloat()
+        chart.axisLeft.axisMinimum = 0f
+        chart.axisLeft.axisMaximum = leftMax
+
+        val elevMin = points.minOf { it.hMSL }.toFloat()
+        val elevMax = points.maxOf { it.hMSL }.toFloat()
+        val elevPad = ((elevMax - elevMin) * 0.05f).coerceAtLeast(1f)
+        chart.axisRight.axisMinimum = elevMin - elevPad
+        chart.axisRight.axisMaximum = elevMax + elevPad
+
         chart.xAxis.apply {
             position = XAxis.XAxisPosition.BOTTOM
             setDrawGridLines(false)
@@ -211,6 +223,23 @@ class FileViewActivity : AppCompatActivity() {
         binding.valuesPanel.visibility  = View.VISIBLE
 
         updateValuesAt(0f, points)
+
+        // Tap a column to toggle its chart series; value+unit dim when hidden
+        fun toggleSeries(col: android.view.View, valueV: android.view.View, unitV: android.view.View, dsIdx: Int) {
+            col.setOnClickListener {
+                val ds = chart.data.getDataSetByIndex(dsIdx) ?: return@setOnClickListener
+                ds.isVisible = !ds.isVisible
+                chart.invalidate()
+                val on = ds.isVisible
+                valueV.alpha = if (on) 1f else 0.3f
+                unitV.alpha  = if (on) 1f else 0.3f
+            }
+        }
+        toggleSeries(binding.colElev,   binding.tvElevValue,   binding.tvElevUnit,   4)
+        toggleSeries(binding.colHSpeed, binding.tvHSpeedValue, binding.tvHSpeedUnit, 0)
+        toggleSeries(binding.colVSpeed, binding.tvVSpeedValue, binding.tvVSpeedUnit, 1)
+        toggleSeries(binding.colTotal,  binding.tvTotalValue,  binding.tvTotalUnit,  2)
+        toggleSeries(binding.colGR,     binding.tvGRValue,     binding.tvGRUnit,     3)
     }
 
     private fun updateValuesAt(timeSec: Float, points: List<TrackPoint>) {
