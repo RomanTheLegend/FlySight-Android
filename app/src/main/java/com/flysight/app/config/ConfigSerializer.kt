@@ -20,6 +20,9 @@ object ConfigSerializer {
     }
 
     fun serialize(original: String, updates: Map<String, String>): String {
+        if (original.isBlank()) {
+            return updates.entries.joinToString("\n") { (k, v) -> "$k: $v" } + "\n"
+        }
         var result = original
         for ((key, value) in updates) {
             val regex = Regex(

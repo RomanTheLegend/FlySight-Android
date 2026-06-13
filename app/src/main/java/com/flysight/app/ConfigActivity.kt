@@ -90,11 +90,16 @@ class ConfigActivity : AppCompatActivity() {
     }
 
     private fun readConfig() {
-        setLoading(true)
-        setStatus("Reading $CONFIG_PATH…")
+        setLoading(true, "Reading $CONFIG_PATH…")
         lifecycleScope.launch {
             try {
-                val bytes = ble.readFile(CONFIG_PATH)
+                val bytes = ble.readFile(CONFIG_PATH) { received, total ->
+                    binding.tvProgressBytes.text = if (total > 0)
+                        "${received / 1024} KB / ${total / 1024} KB"
+                    else
+                        "$received bytes"
+                    binding.tvProgressBytes.visibility = View.VISIBLE
+                }
                 originalText = String(bytes, Charsets.UTF_8)
                 val settings = ConfigParser.parse(originalText)
                 settingsItems = buildItems(settings)
@@ -102,8 +107,8 @@ class ConfigActivity : AppCompatActivity() {
                 binding.recyclerSettings.adapter = settingsAdapter
                 binding.recyclerSettings.visibility = View.VISIBLE
                 binding.tvEmpty.visibility = View.GONE
-                setStatus("${settingsItems.count { it !is SettingItem.Section }} settings loaded")
-                binding.btnSave.isEnabled = true
+                val label = if (originalText.isBlank()) "defaults" else "${settingsItems.count { it !is SettingItem.Section }} settings"
+                setStatus("$label loaded")
             } catch (e: Exception) {
                 setStatus("Read error: ${e.message}")
                 Toast.makeText(this@ConfigActivity, "Read failed: ${e.message}", Toast.LENGTH_LONG).show()
@@ -114,18 +119,24 @@ class ConfigActivity : AppCompatActivity() {
     }
 
     private fun saveConfig() {
-        if (originalText.isBlank()) {
+        if (settingsItems.isEmpty()) {
             Toast.makeText(this, "Nothing to save", Toast.LENGTH_SHORT).show()
             return
         }
-        setLoading(true)
-        setStatus("Writing $CONFIG_PATH…")
         lifecycleScope.launch {
             try {
                 val updates = ConfigSerializer.collectValues(settingsItems)
                 val newText = ConfigSerializer.serialize(originalText, updates)
                 val bytes   = newText.toByteArray(Charsets.UTF_8)
-                ble.writeFile(CONFIG_PATH, bytes)
+                setLoading(true, "Writing $CONFIG_PATH…")
+                binding.progressBar.isIndeterminate = false
+                binding.progressBar.max = bytes.size
+                binding.progressBar.progress = 0
+                ble.writeFile(CONFIG_PATH, bytes) { written, total ->
+                    binding.progressBar.progress = written.toInt()
+                    binding.tvProgressBytes.text = "${written / 1024} KB / ${total / 1024} KB"
+                    binding.tvProgressBytes.visibility = View.VISIBLE
+                }
                 originalText = newText
                 setStatus("Saved ${bytes.size} bytes  ✓")
                 Toast.makeText(this@ConfigActivity, "Config saved!", Toast.LENGTH_SHORT).show()
@@ -161,10 +172,15 @@ class ConfigActivity : AppCompatActivity() {
         mapPickerLauncher.launch(intent)
     }
 
-    private fun setLoading(loading: Boolean) {
-        binding.progressBar.visibility  = if (loading) View.VISIBLE else View.GONE
+    private fun setLoading(loading: Boolean, message: String = "") {
+        binding.loadingPanel.visibility = if (loading) View.VISIBLE else View.GONE
+        if (loading) {
+            if (message.isNotEmpty()) binding.tvLoadingStatus.text = message
+            binding.progressBar.isIndeterminate = true
+            binding.tvProgressBytes.visibility = View.GONE
+        }
         binding.btnRead.isEnabled       = !loading
-        binding.btnSave.isEnabled       = !loading && originalText.isNotBlank()
+        binding.btnSave.isEnabled       = !loading && settingsItems.isNotEmpty()
         binding.btnDisconnect.isEnabled = !loading
     }
 

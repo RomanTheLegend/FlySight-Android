@@ -20,6 +20,7 @@ import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.flysight.app.ble.BleState
+import com.flysight.app.ble.CONFIG_PATH
 import com.flysight.app.ble.DirEntry
 import com.flysight.app.databinding.ActivityFileBrowserBinding
 import kotlinx.coroutines.flow.collectLatest
@@ -71,7 +72,7 @@ class FileBrowserActivity : AppCompatActivity() {
                         pathStack.addLast(entryPath)
                         loadDirectory(ble)
                     }
-                    entry.name.equals("CONFIG.TXT", ignoreCase = true) -> {
+                    entry.name.equals(CONFIG_PATH, ignoreCase = true) -> {
                         startActivity(Intent(this, ConfigActivity::class.java))
                     }
                     else -> {
@@ -182,7 +183,7 @@ class FileBrowserActivity : AppCompatActivity() {
                 val dateFolders    = all.filter { it.isDirectory && datePattern.matches(it.name) }
                 val specialFolders = all.filter { it.isDirectory && !datePattern.matches(it.name) }
                 val files          = all.filter { !it.isDirectory &&
-                    it.name.equals("CONFIG.TXT", ignoreCase = true) }
+                    it.name.equals(CONFIG_PATH, ignoreCase = true) }
 
                 val items = buildList<FileBrowserItem> {
                     if (dateFolders.isNotEmpty()) {

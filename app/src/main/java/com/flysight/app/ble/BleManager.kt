@@ -69,7 +69,7 @@ class BleManager(private val context: Context) {
     private var mtuCh        = Channel<Int>(1)
     private var servicesCh   = Channel<Boolean>(1)
     private var descriptorCh = Channel<Boolean>(1)
-    private val notifyCh     = Channel<ByteArray>(Channel.UNLIMITED)
+    private var notifyCh     = Channel<ByteArray>(Channel.UNLIMITED)
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var pingJob: Job? = null
@@ -85,7 +85,7 @@ class BleManager(private val context: Context) {
     private val gattCb = object : BluetoothGattCallback() {
 
         override fun onConnectionStateChange(g: BluetoothGatt, status: Int, newState: Int) {
-            if (bleLogging) Log.d(TAG, "ConnectionState status=$status newState=$newState")
+            //if (bleLogging) Log.d(TAG, "ConnectionState status=$status newState=$newState")
             when (newState) {
                 BluetoothProfile.STATE_CONNECTED    -> connectedCh.trySend(true)
                 BluetoothProfile.STATE_DISCONNECTED -> {
@@ -95,6 +95,10 @@ class BleManager(private val context: Context) {
                     g.close()
                     gatt = null
                     ftPacketIn = null
+                    // Unblock any coroutine waiting on notifyCh.receive() so it fails fast
+                    // instead of waiting out the full transfer timeout.
+                    notifyCh.close()
+                    notifyCh = Channel(Channel.UNLIMITED)
                 }
             }
         }
@@ -212,6 +216,7 @@ class BleManager(private val context: Context) {
         mtuCh        = Channel(1)
         servicesCh   = Channel(1)
         descriptorCh = Channel(1)
+        notifyCh     = Channel(Channel.UNLIMITED)
         drain()
         gatt = device.connectGatt(context, false, gattCb, BluetoothDevice.TRANSPORT_LE)
         scope.launch { doConnect() }
@@ -354,7 +359,7 @@ class BleManager(private val context: Context) {
                     }
                     behind in 1..8 -> {
                         // GBN retransmission — re-ACK so firmware can advance next_ack
-                        rawWrite(byteArrayOf(FtOpcode.ACK_DATA, counter.toByte()), delayMs = 10)
+                        rawWrite(byteArrayOf(FtOpcode.ACK_DATA, counter.toByte()), delayMs = 0)
                     }
                     // else: out-of-order future packet — ignore
                 }
@@ -367,55 +372,88 @@ class BleManager(private val context: Context) {
         return buf.toByteArray()
     }
 
-    suspend fun writeFile(path: String, data: ByteArray) {
+    suspend fun writeFile(
+        path: String,
+        data: ByteArray,
+        onProgress: ((written: Long, total: Long) -> Unit)? = null
+    ) {
         pingJob?.cancel()
         try {
-            doWrite(path, data)
+            doWrite(path, data, onProgress)
         } finally {
             if (gatt != null) startPing()
         }
     }
 
-    private suspend fun doWrite(path: String, data: ByteArray) {
+    private suspend fun doWrite(
+        path: String,
+        data: ByteArray,
+        onProgress: ((written: Long, total: Long) -> Unit)? = null
+    ) {
         val pathBytes = path.toByteArray(Charsets.UTF_8)
         val openCmd = ByteArray(1 + pathBytes.size + 1)
         openCmd[0] = FtOpcode.WRITE_FILE
         pathBytes.copyInto(openCmd, 1)
-        // last byte stays 0 (null terminator)
 
         drain()
         rawWrite(openCmd)
-        waitAck(FtOpcode.WRITE_FILE) ?: error("Write open NAK/timeout for $path")
+        when (waitAck(FtOpcode.WRITE_FILE)) {
+            true  -> Unit
+            false -> error("Write rejected (NAK) for $path — ensure device is in Idle mode (LED off)")
+            null  -> error("Write timed out for $path")
+        }
 
-        // Max payload per packet: MTU − 3 (ATT) − 1 (opcode) − 1 (counter)
-        val maxChunk = (negotiatedMtu - 5).coerceAtLeast(18)
-        var counter  = 0
-        var offset   = 0
+        // GBN ARQ — matches iOS BluetoothManager: frameLength=242, window=8, timeout=200ms
+        val frameLen   = 242
+        val windowLen  = 8
+        val retryMs    = 200L
+        val dataChunks = if (data.isEmpty()) 0 else (data.size + frameLen - 1) / frameLen
+        val totalPkts  = dataChunks + 1   // data packets + 1 EOF
+
+        var nextSend = 0
+        var nextAck  = 0
+
+        fun buildPkt(idx: Int): ByteArray {
+            val chunk = if (idx < dataChunks)
+                data.copyOfRange(idx * frameLen, minOf((idx + 1) * frameLen, data.size))
+            else ByteArray(0)
+            val pkt = ByteArray(2 + chunk.size)
+            pkt[0] = FtOpcode.FILE_DATA
+            pkt[1] = (idx and 0xFF).toByte()
+            chunk.copyInto(pkt, 2)
+            return pkt
+        }
 
         try {
-            while (true) {
-                val chunk = if (offset < data.size)
-                    data.copyOfRange(offset, minOf(offset + maxChunk, data.size))
-                else
-                    ByteArray(0)  // EOF signal
-
-                val pkt = ByteArray(2 + chunk.size)
-                pkt[0] = FtOpcode.FILE_DATA
-                pkt[1] = (counter and 0xFF).toByte()
-                chunk.copyInto(pkt, 2)
-
-                // Stop-and-wait with up to 5 retries
-                var acked = false
-                for (attempt in 1..5) {
-                    rawWrite(pkt)
-                    acked = waitDataAck(counter)
-                    if (acked) break
+            while (nextAck < totalPkts) {
+                // Fill send window; hold EOF until all data packets are ACKed
+                while (nextSend < nextAck + windowLen && nextSend < totalPkts) {
+                    if (nextSend == dataChunks && nextAck < dataChunks) break
+                    if (!rawWrite(buildPkt(nextSend), delayMs = 0)) break
+                    nextSend++
                 }
-                if (!acked) error("No ACK for packet $counter after 5 retries")
 
-                if (offset >= data.size) break  // EOF packet was ACKed
-                offset  += chunk.size
-                counter  = (counter + 1) and 0xFF
+                // Wait for the next expected ACK; on 200 ms timeout GBN retransmits
+                val acked = withTimeoutOrNull(retryMs) {
+                    while (true) {
+                        val p = notifyCh.receive()
+                        if (p.isNotEmpty() && p[0] == FtOpcode.NAK) error("NAK during file write")
+                        if (p.size >= 2 && p[0] == FtOpcode.ACK_DATA
+                            && (p[1].toInt() and 0xFF) == (nextAck and 0xFF))
+                            return@withTimeoutOrNull true
+                    }
+                    @Suppress("UNREACHABLE_CODE") false
+                } ?: false
+
+                if (acked) {
+                    nextAck++
+                    onProgress?.invoke(
+                        minOf(nextAck.toLong() * frameLen, data.size.toLong()),
+                        data.size.toLong()
+                    )
+                } else {
+                    nextSend = nextAck   // GBN: retransmit window from oldest un-ACKed packet
+                }
             }
         } catch (e: Exception) {
             runCatching { rawWrite(byteArrayOf(FtOpcode.CANCEL)) }
@@ -490,7 +528,7 @@ class BleManager(private val context: Context) {
         waitAck(FtOpcode.LIST_DIR) ?: error("List dir NAK/timeout for '$path'")
 
         // Receive 0x11 FILE_INFO notifications — no ACK required from the phone.
-        // Format per packet: [0x11][counter][size:4LE][date:2LE][time:2LE][attr:1][name:13B null-padded]
+        // Format per packet: [0x11][counter][size:4LE][date:2LE][time:2LE][attr:1][name:null-terminated]
         // End of list: name[0] == 0
         val entries = mutableListOf<DirEntry>()
         try {
@@ -503,8 +541,8 @@ class BleManager(private val context: Context) {
                     val size = ByteBuffer.wrap(pkt, 2, 4)
                         .order(ByteOrder.LITTLE_ENDIAN).int.toLong() and 0xFFFFFFFFL
                     val attr = pkt[10].toInt() and 0xFF
-                    val nameLen = (0 until 13).indexOfFirst { pkt[11 + it] == 0.toByte() }
-                        .let { if (it < 0) 13 else it }
+                    val nameLen = (11 until pkt.size).indexOfFirst { pkt[it] == 0.toByte() }
+                        .let { if (it < 0) pkt.size - 11 else it }
                     val name = String(pkt, 11, nameLen, Charsets.UTF_8)
                     val isDir = (attr and 0x10) != 0
                     entries.add(DirEntry(name, isDir, if (isDir) 0L else size))
@@ -545,23 +583,11 @@ class BleManager(private val context: Context) {
         }
     }
 
-    private suspend fun waitDataAck(counter: Int): Boolean =
-        withTimeoutOrNull(OP_TIMEOUT_MS) {
-            while (true) {
-                val p = notifyCh.receive()
-                if (p[0] == FtOpcode.ACK_DATA && (p[1].toInt() and 0xFF) == counter)
-                    return@withTimeoutOrNull true
-                if (p[0] == FtOpcode.NAK)
-                    error("NAK received during file write")
-            }
-            @Suppress("UNREACHABLE_CODE") false
-        } ?: false
-
     private fun drain() {
         while (notifyCh.tryReceive().isSuccess) { /* discard stale packets */ }
     }
 
-    private suspend fun rawWrite(data: ByteArray, delayMs: Long = 20L) {
+    private suspend fun rawWrite(data: ByteArray, delayMs: Long = 20L): Boolean {
         if (delayMs > 0) delay(delayMs)
         val char = ftPacketIn ?: error("Not connected")
         val g    = gatt        ?: error("Not connected")
@@ -575,7 +601,8 @@ class BleManager(private val context: Context) {
             @Suppress("DEPRECATION")
             g.writeCharacteristic(char)
         }
-        if (!ok && bleLogging) Log.w(TAG, "TX FAILED — writeCharacteristic returned error for [${data.joinToString(" ") { "%02x".format(it) }}]")
+        if (!ok && bleLogging) Log.w(TAG, "TX FAILED: [${data.joinToString(" ") { "%02x".format(it) }}]")
+        return ok
     }
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
