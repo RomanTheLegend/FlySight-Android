@@ -48,18 +48,21 @@ class SettingsAdapter(private val items: List<SettingItem>) :
     class ToggleVH(view: View) : RecyclerView.ViewHolder(view) {
         private val tvLabel: TextView = view.findViewById(R.id.tvLabel)
         private val sw: SwitchCompat  = view.findViewById(R.id.switchToggle)
+        private val btnHint: TextView = view.findViewById(R.id.btnHint)
 
         fun bind(item: SettingItem.Toggle) {
             tvLabel.text = item.label
             sw.setOnCheckedChangeListener(null)
             sw.isChecked = item.enabled
             sw.setOnCheckedChangeListener { _, checked -> item.enabled = checked }
+            bindHint(btnHint, item.hint)
         }
     }
 
     class ChoiceVH(view: View) : RecyclerView.ViewHolder(view) {
         private val tvLabel: TextView = view.findViewById(R.id.tvLabel)
         private val tvValue: TextView = view.findViewById(R.id.tvValue)
+        private val btnHint: TextView = view.findViewById(R.id.btnHint)
 
         fun bind(item: SettingItem.Choice) {
             tvLabel.text = item.label
@@ -74,6 +77,7 @@ class SettingsAdapter(private val items: List<SettingItem>) :
                     }
                     .show()
             }
+            bindHint(btnHint, item.hint)
         }
     }
 
@@ -81,6 +85,7 @@ class SettingsAdapter(private val items: List<SettingItem>) :
         private val tvLabel: TextView = view.findViewById(R.id.tvLabel)
         private val etValue: EditText = view.findViewById(R.id.etValue)
         private val tvUnit:  TextView = view.findViewById(R.id.tvUnit)
+        private val btnHint: TextView = view.findViewById(R.id.btnHint)
         private var bound: SettingItem.NumberInput? = null
 
         private val watcher = object : TextWatcher {
@@ -102,6 +107,7 @@ class SettingsAdapter(private val items: List<SettingItem>) :
             etValue.setText(item.value)
             tvUnit.text = item.unit
             tvUnit.visibility = if (item.unit.isEmpty()) View.GONE else View.VISIBLE
+            bindHint(btnHint, item.hint)
             bound = item
         }
     }
@@ -109,11 +115,13 @@ class SettingsAdapter(private val items: List<SettingItem>) :
     class CoordPickerVH(view: View) : RecyclerView.ViewHolder(view) {
         private val tvLabel:  TextView = view.findViewById(R.id.tvLabel)
         private val tvCoords: TextView = view.findViewById(R.id.tvCoords)
+        private val btnHint:  TextView = view.findViewById(R.id.btnHint)
 
         fun bind(item: SettingItem.CoordPicker) {
             tvLabel.text  = item.label
             tvCoords.text = formatCoords(item.latRaw, item.lonRaw)
             itemView.setOnClickListener { item.onPickClicked() }
+            bindHint(btnHint, item.hint)
         }
 
         private fun formatCoords(latRaw: String, lonRaw: String): String {
@@ -122,5 +130,19 @@ class SettingsAdapter(private val items: List<SettingItem>) :
             return if (lat == 0.0 && lon == 0.0) "Not set"
                    else "%.6f°,  %.6f°".format(lat, lon)
         }
+    }
+}
+
+private fun bindHint(btn: TextView, hint: String?) {
+    if (hint == null) {
+        btn.visibility = View.GONE
+        return
+    }
+    btn.visibility = View.VISIBLE
+    btn.setOnClickListener {
+        AlertDialog.Builder(btn.context)
+            .setMessage(hint)
+            .setPositiveButton("OK", null)
+            .show()
     }
 }

@@ -38,4 +38,18 @@
         android:layout_marginStart="4dp"
         android:minWidth="32dp" />
 
+    <TextView
+        android:id="@+id/btnHint"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:text="ⓘ"
+        android:textSize="17sp"
+        android:textColor="@color/colorTextSecondary"
+        android:gravity="center"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:layout_marginStart="4dp"
+        android:visibility="gone" />
+
 </LinearLayout>

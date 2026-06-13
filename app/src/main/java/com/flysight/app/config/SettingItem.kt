@@ -17,7 +17,8 @@ sealed class SettingItem {
     data class Toggle(
         val key: String,
         val label: String,
-        var enabled: Boolean
+        var enabled: Boolean,
+        val hint: String? = null
     ) : SettingItem() {
         override val viewType = VIEW_TOGGLE
     }
@@ -27,7 +28,8 @@ sealed class SettingItem {
         val label: String,
         val options: List<String>,
         val values: List<String>,
-        var selectedIndex: Int
+        var selectedIndex: Int,
+        val hint: String? = null
     ) : SettingItem() {
         override val viewType = VIEW_CHOICE
     }
@@ -37,7 +39,8 @@ sealed class SettingItem {
         val label: String,
         var value: String,
         val unit: String = "",
-        val isDecimal: Boolean = false
+        val isDecimal: Boolean = false,
+        val hint: String? = null
     ) : SettingItem() {
         override val viewType = VIEW_NUMBER
     }
@@ -48,6 +51,7 @@ sealed class SettingItem {
         val label: String,
         var latRaw: String,
         var lonRaw: String,
+        val hint: String? = null,
         val onPickClicked: () -> Unit
     ) : SettingItem() {
         override val viewType = VIEW_COORD
