@@ -125,8 +125,7 @@ class ConfigActivity : AppCompatActivity() {
         }
         lifecycleScope.launch {
             try {
-                val updates = ConfigSerializer.collectValues(settingsItems)
-                val newText = ConfigSerializer.serialize(originalText, updates)
+                val newText = ConfigSerializer.serialize(settingsItems, originalText)
                 val bytes   = newText.toByteArray(Charsets.UTF_8)
                 setLoading(true, "Writing $CONFIG_PATH…")
                 binding.progressBar.isIndeterminate = false

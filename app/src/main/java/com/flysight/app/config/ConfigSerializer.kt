@@ -2,35 +2,57 @@ package com.flysight.app.config
 
 object ConfigSerializer {
 
-    fun collectValues(items: List<SettingItem>): Map<String, String> {
-        val map = mutableMapOf<String, String>()
+    fun serialize(items: List<SettingItem>, original: String): String {
+        val knownKeys = mutableSetOf<String>()
+        val sb = StringBuilder()
+        var firstSection = true
+
         for (item in items) {
             when (item) {
-                is SettingItem.Toggle      -> map[item.key] = if (item.enabled) "1" else "0"
-                is SettingItem.Choice      -> map[item.key] = item.values[item.selectedIndex]
-                is SettingItem.NumberInput -> if (item.value.isNotBlank()) map[item.key] = item.value
-                is SettingItem.CoordPicker -> {
-                    if (item.latRaw.isNotBlank()) map[item.latKey] = item.latRaw
-                    if (item.lonRaw.isNotBlank()) map[item.lonKey] = item.lonRaw
+                is SettingItem.Section -> {
+                    if (!firstSection) sb.append('\n')
+                    firstSection = false
+                    sb.append("; ==== ${item.title} ====\n")
                 }
-                else -> Unit
+                is SettingItem.Toggle -> {
+                    item.hint?.let { sb.append("; $it\n") }
+                    sb.append("${item.key}: ${if (item.enabled) "1" else "0"}\n")
+                    knownKeys.add(item.key)
+                }
+                is SettingItem.Choice -> {
+                    item.hint?.let { sb.append("; $it\n") }
+                    sb.append("${item.key}: ${item.values[item.selectedIndex]}\n")
+                    knownKeys.add(item.key)
+                }
+                is SettingItem.NumberInput -> {
+                    if (item.value.isNotBlank()) {
+                        item.hint?.let { sb.append("; $it\n") }
+                        sb.append("${item.key}: ${item.value}\n")
+                        knownKeys.add(item.key)
+                    }
+                }
+                is SettingItem.CoordPicker -> {
+                    item.hint?.let { sb.append("; $it\n") }
+                    if (item.latRaw.isNotBlank()) {
+                        sb.append("${item.latKey}: ${item.latRaw}\n")
+                        knownKeys.add(item.latKey)
+                    }
+                    if (item.lonRaw.isNotBlank()) {
+                        sb.append("${item.lonKey}: ${item.lonRaw}\n")
+                        knownKeys.add(item.lonKey)
+                    }
+                }
             }
         }
-        return map
-    }
 
-    fun serialize(original: String, updates: Map<String, String>): String {
-        if (original.isBlank()) {
-            return updates.entries.joinToString("\n") { (k, v) -> "$k: $v" } + "\n"
+        // Carry over any keys from the original file not represented in the items list
+        val unknown = ConfigParser.parse(original).entries.filter { it.key !in knownKeys }
+        if (unknown.isNotEmpty()) {
+            sb.append('\n')
+            sb.append("; ==== Other ====\n")
+            for ((k, v) in unknown) sb.append("$k: $v\n")
         }
-        var result = original
-        for ((key, value) in updates) {
-            val regex = Regex(
-                "^(${Regex.escape(key)}\\s*:\\s*)\\S+",
-                RegexOption.MULTILINE
-            )
-            result = regex.replace(result) { mr -> mr.groupValues[1] + value }
-        }
-        return result
+
+        return sb.toString()
     }
 }
