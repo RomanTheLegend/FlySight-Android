@@ -35,6 +35,7 @@
     <color name="colorChartVSpeed">#CC5555</color>
     <color name="colorChartTotalSpeed">#55CC88</color>
     <color name="colorChartElevation">#E8A020</color>
+    <color name="colorChartGR">#BB44CC</color>
 
     <color name="white">#FFFFFF</color>
     <color name="black">#000000</color>

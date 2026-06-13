@@ -254,6 +254,36 @@
                     android:textColor="@color/colorTextTertiary" />
             </LinearLayout>
 
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="GLIDE RATIO"
+                    android:textSize="10sp"
+                    android:textAllCaps="true"
+                    android:textColor="@color/colorTextTertiary"
+                    android:letterSpacing="0.05" />
+                <TextView
+                    android:id="@+id/tvGRValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="—"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/colorChartGR" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="h/v"
+                    android:textSize="11sp"
+                    android:textColor="@color/colorTextTertiary" />
+            </LinearLayout>
+
         </LinearLayout>
 
     </com.google.android.material.card.MaterialCardView>
