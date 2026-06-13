@@ -10,8 +10,9 @@ sealed class SettingItem {
     }
     abstract val viewType: Int
 
-    data class Section(val title: String) : SettingItem() {
+    class Section(val title: String) : SettingItem() {
         override val viewType = VIEW_SECTION
+        var isExpanded: Boolean = false
     }
 
     data class Toggle(

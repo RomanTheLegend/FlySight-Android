@@ -13,11 +13,27 @@ import androidx.appcompat.widget.SwitchCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.flysight.app.R
 
-class SettingsAdapter(private val items: List<SettingItem>) :
+class SettingsAdapter(private val allItems: List<SettingItem>) :
     RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
-    override fun getItemCount() = items.size
-    override fun getItemViewType(pos: Int) = items[pos].viewType
+    private val displayedItems: MutableList<SettingItem> = computeDisplayed().toMutableList()
+
+    private fun computeDisplayed(): List<SettingItem> {
+        val result = mutableListOf<SettingItem>()
+        var currentExpanded = true
+        for (item in allItems) {
+            if (item is SettingItem.Section) {
+                currentExpanded = item.isExpanded
+                result.add(item)
+            } else if (currentExpanded) {
+                result.add(item)
+            }
+        }
+        return result
+    }
+
+    override fun getItemCount() = displayedItems.size
+    override fun getItemViewType(pos: Int) = displayedItems[pos].viewType
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         val inf = LayoutInflater.from(parent.context)
@@ -31,8 +47,8 @@ class SettingsAdapter(private val items: List<SettingItem>) :
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        when (val item = items[position]) {
-            is SettingItem.Section     -> (holder as SectionVH).bind(item)
+        when (val item = displayedItems[position]) {
+            is SettingItem.Section     -> (holder as SectionVH).bind(item) { toggleSection(item) }
             is SettingItem.Toggle      -> (holder as ToggleVH).bind(item)
             is SettingItem.Choice      -> (holder as ChoiceVH).bind(item)
             is SettingItem.NumberInput -> (holder as NumberVH).bind(item)
@@ -40,9 +56,48 @@ class SettingsAdapter(private val items: List<SettingItem>) :
         }
     }
 
+    private fun toggleSection(section: SettingItem.Section) {
+        val sectionPos = displayedItems.indexOfFirst { it === section }
+        if (sectionPos == -1) return
+
+        if (section.isExpanded) {
+            section.isExpanded = false
+            val firstChild = sectionPos + 1
+            var count = 0
+            while (firstChild + count < displayedItems.size &&
+                   displayedItems[firstChild + count] !is SettingItem.Section) {
+                count++
+            }
+            if (count > 0) {
+                repeat(count) { displayedItems.removeAt(firstChild) }
+                notifyItemRangeRemoved(firstChild, count)
+            }
+        } else {
+            section.isExpanded = true
+            val allSectionPos = allItems.indexOfFirst { it === section }
+            val children = mutableListOf<SettingItem>()
+            for (i in allSectionPos + 1 until allItems.size) {
+                if (allItems[i] is SettingItem.Section) break
+                children.add(allItems[i])
+            }
+            if (children.isNotEmpty()) {
+                val insertPos = sectionPos + 1
+                displayedItems.addAll(insertPos, children)
+                notifyItemRangeInserted(insertPos, children.size)
+            }
+        }
+        notifyItemChanged(sectionPos)
+    }
+
     class SectionVH(view: View) : RecyclerView.ViewHolder(view) {
-        private val tvTitle: TextView = view.findViewById(R.id.tvSectionTitle)
-        fun bind(item: SettingItem.Section) { tvTitle.text = item.title }
+        private val tvTitle:   TextView = view.findViewById(R.id.tvSectionTitle)
+        private val tvChevron: TextView = view.findViewById(R.id.tvChevron)
+
+        fun bind(item: SettingItem.Section, onToggle: () -> Unit) {
+            tvTitle.text   = item.title
+            tvChevron.text = if (item.isExpanded) "▼" else "▶"
+            itemView.setOnClickListener { onToggle() }
+        }
     }
 
     class ToggleVH(view: View) : RecyclerView.ViewHolder(view) {

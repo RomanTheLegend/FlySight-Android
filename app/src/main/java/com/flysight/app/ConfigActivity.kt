@@ -229,7 +229,7 @@ class ConfigActivity : AppCompatActivity() {
 
         return buildList {
             // ── Navigation ───────────────────────────────────────────────────
-            add(SettingItem.Section("Navigation"))
+            add(SettingItem.Section("Navigation").also { it.isExpanded = true })
             add(dzCoord)
             add(num("DZ_Elev",   "Dropzone Elevation",  "m",  "0",
                 hint = "Ground elevation of the dropzone in meters. All alarm and AGL elevations are measured relative to this value."))
