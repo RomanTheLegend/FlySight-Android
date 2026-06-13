@@ -70,6 +70,10 @@ class BleManager(private val context: Context) {
     private var servicesCh   = Channel<Boolean>(1)
     private var descriptorCh = Channel<Boolean>(1)
     private var notifyCh     = Channel<ByteArray>(Channel.UNLIMITED)
+    private var readCharCh   = Channel<Pair<UUID, ByteArray>>(Channel.CONFLATED)
+
+    private val _batteryLevel = MutableStateFlow(-1)
+    val batteryLevel: StateFlow<Int> = _batteryLevel
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var pingJob: Job? = null
@@ -91,6 +95,7 @@ class BleManager(private val context: Context) {
                 BluetoothProfile.STATE_DISCONNECTED -> {
                     connectedCh.trySend(false)
                     _state.value = BleState.Disconnected
+                    _batteryLevel.value = -1
                     pingJob?.cancel()
                     g.close()
                     gatt = null
@@ -99,6 +104,8 @@ class BleManager(private val context: Context) {
                     // instead of waiting out the full transfer timeout.
                     notifyCh.close()
                     notifyCh = Channel(Channel.UNLIMITED)
+                    readCharCh.close()
+                    readCharCh = Channel(Channel.CONFLATED)
                 }
             }
         }
@@ -131,6 +138,26 @@ class BleManager(private val context: Context) {
             routePacket(c.uuid, value)
         }
 
+        @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
+        override fun onCharacteristicRead(
+            g: BluetoothGatt,
+            c: BluetoothGattCharacteristic,
+            status: Int
+        ) {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU && status == BluetoothGatt.GATT_SUCCESS)
+                readCharCh.trySend(Pair(c.uuid, c.value ?: return))
+        }
+
+        override fun onCharacteristicRead(
+            g: BluetoothGatt,
+            c: BluetoothGattCharacteristic,
+            value: ByteArray,
+            status: Int
+        ) {
+            if (status == BluetoothGatt.GATT_SUCCESS)
+                readCharCh.trySend(Pair(c.uuid, value))
+        }
+
         override fun onDescriptorWrite(
             g: BluetoothGatt,
             d: BluetoothGattDescriptor,
@@ -142,9 +169,14 @@ class BleManager(private val context: Context) {
     }
 
     private fun routePacket(uuid: UUID, value: ByteArray) {
-        if (uuid == FlySightUuids.FT_PACKET_OUT && value.isNotEmpty()) {
-            if (bleLogging) Log.d(TAG, "RX ${value.size}b: [${value.joinToString(" ") { "%02x".format(it) }}]")
-            notifyCh.trySend(value.copyOf())
+        when {
+            uuid == FlySightUuids.FT_PACKET_OUT && value.isNotEmpty() -> {
+                if (bleLogging) Log.d(TAG, "RX ${value.size}b: [${value.joinToString(" ") { "%02x".format(it) }}]")
+                notifyCh.trySend(value.copyOf())
+            }
+            uuid == FlySightUuids.BATTERY_LEVEL && value.isNotEmpty() -> {
+                _batteryLevel.value = value[0].toInt() and 0xFF
+            }
         }
     }
 
@@ -217,6 +249,7 @@ class BleManager(private val context: Context) {
         servicesCh   = Channel(1)
         descriptorCh = Channel(1)
         notifyCh     = Channel(Channel.UNLIMITED)
+        readCharCh   = Channel(Channel.CONFLATED)
         drain()
         gatt = device.connectGatt(context, false, gattCb, BluetoothDevice.TRANSPORT_LE)
         scope.launch { doConnect() }
@@ -282,6 +315,26 @@ class BleManager(private val context: Context) {
             _state.value = BleState.Error(
                 "Could not enable notifications.\nPair the device first (double-press button).")
             return
+        }
+
+        // Enable notifications on battery level if the device supports it.
+        // Without CCCD enabled the device returns its stale/default value (0) on plain reads.
+        val batChar = g.getService(FlySightUuids.BATTERY_SERVICE)
+            ?.getCharacteristic(FlySightUuids.BATTERY_LEVEL)
+        if (batChar != null) {
+            g.setCharacteristicNotification(batChar, true)
+            val batCccd = batChar.getDescriptor(FlySightUuids.CCCD)
+            if (batCccd != null) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    g.writeDescriptor(batCccd, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
+                } else {
+                    @Suppress("DEPRECATION")
+                    batCccd.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+                    @Suppress("DEPRECATION")
+                    g.writeDescriptor(batCccd)
+                }
+                withTimeoutOrNull(5_000) { descriptorCh.receive() }
+            }
         }
 
         _state.value = BleState.Ready
@@ -555,6 +608,11 @@ class BleManager(private val context: Context) {
 
         return entries.sortedWith(compareBy({ !it.isDirectory }, { it.name.uppercase() }))
     }
+
+    // ── Battery ───────────────────────────────────────────────────────────────
+    // Battery level is driven by CCCD notifications subscribed in doConnect().
+    // A direct readCharacteristic on the battery level returns 0x00 (firmware bug —
+    // the read handler does not return the current measured value). Do not use reads.
 
     // ── Protocol helpers ──────────────────────────────────────────────────────
 

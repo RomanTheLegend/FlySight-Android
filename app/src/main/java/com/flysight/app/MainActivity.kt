@@ -128,16 +128,18 @@ class MainActivity : AppCompatActivity() {
 
     private fun showScanIdle() {
         binding.tvBtnScanLabel.text = LABEL_SCAN
-        binding.panelScanIdle.visibility   = View.VISIBLE
-        binding.panelScanActive.visibility = View.GONE
-        binding.panelConnecting.visibility = View.GONE
+        binding.tvSectionAddDevice.visibility = View.VISIBLE
+        binding.panelScanIdle.visibility      = View.VISIBLE
+        binding.panelScanActive.visibility    = View.GONE
+        binding.panelConnecting.visibility    = View.GONE
         connectingDevice = null
     }
 
     private fun showConnecting(step: Int) {
-        binding.panelScanIdle.visibility   = View.GONE
-        binding.panelScanActive.visibility = View.GONE
-        binding.panelConnecting.visibility = View.VISIBLE
+        binding.tvSectionAddDevice.visibility = View.INVISIBLE
+        binding.panelScanIdle.visibility      = View.GONE
+        binding.panelScanActive.visibility    = View.GONE
+        binding.panelConnecting.visibility    = View.VISIBLE
 
         val deviceLabel = connectingDevice?.name ?: "device"
         binding.tvConnectDevice.text = "Connecting to $deviceLabel…"
@@ -160,9 +162,10 @@ class MainActivity : AppCompatActivity() {
     private fun startScan() {
         ble.startScan()
         binding.tvBtnScanLabel.text = LABEL_STOP
-        binding.panelScanIdle.visibility   = View.GONE
-        binding.panelScanActive.visibility = View.VISIBLE
-        binding.panelConnecting.visibility = View.GONE
+        binding.tvSectionAddDevice.visibility = View.VISIBLE
+        binding.panelScanIdle.visibility      = View.GONE
+        binding.panelScanActive.visibility    = View.VISIBLE
+        binding.panelConnecting.visibility    = View.GONE
         binding.tvScanCount.text = ""
         binding.tvEmpty.visibility = View.GONE
     }

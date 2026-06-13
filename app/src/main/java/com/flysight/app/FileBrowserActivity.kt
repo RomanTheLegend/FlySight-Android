@@ -58,8 +58,8 @@ class FileBrowserActivity : AppCompatActivity() {
                     pathStack.removeLast()
                     loadDirectory(ble)
                 } else {
-                    isEnabled = false
-                    onBackPressedDispatcher.onBackPressed()
+                    ble.disconnect()
+                    finish()
                 }
             }
         })
@@ -131,6 +131,17 @@ class FileBrowserActivity : AppCompatActivity() {
             }
         }
 
+        lifecycleScope.launch {
+            ble.batteryLevel.collectLatest { level ->
+                if (level >= 0) {
+                    binding.tvBattery.text = "$level%"
+                    binding.batteryChip.visibility = android.view.View.VISIBLE
+                } else {
+                    binding.batteryChip.visibility = android.view.View.GONE
+                }
+            }
+        }
+
         pathStack.addLast("")
         loadDirectory(ble)
     }
@@ -159,6 +170,7 @@ class FileBrowserActivity : AppCompatActivity() {
 
     private fun loadDirectory(ble: com.flysight.app.ble.BleManager) {
         binding.tvPath.text = if (currentPath.isEmpty()) "/ root" else "/$currentPath"
+        binding.btnHeaderBack.visibility = if (pathStack.size > 1) View.VISIBLE else View.GONE
         binding.tvEmpty.visibility = View.GONE
         setLoading(true)
 

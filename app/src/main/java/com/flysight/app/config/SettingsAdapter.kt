@@ -110,6 +110,7 @@ class SettingsAdapter(private val allItems: List<SettingItem>) :
             sw.setOnCheckedChangeListener(null)
             sw.isChecked = item.enabled
             sw.setOnCheckedChangeListener { _, checked -> item.enabled = checked }
+            itemView.setOnClickListener { sw.toggle() }
             bindHint(btnHint, item.hint)
         }
     }

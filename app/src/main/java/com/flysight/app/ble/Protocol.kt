@@ -7,6 +7,8 @@ object FlySightUuids {
     val FT_PACKET_OUT:          UUID = UUID.fromString("00000001-8e22-4541-9d4c-21edae82ed19")
     val FT_PACKET_IN:           UUID = UUID.fromString("00000002-8e22-4541-9d4c-21edae82ed19")
     val CCCD:                   UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
+    val BATTERY_SERVICE:        UUID = UUID.fromString("0000180f-0000-1000-8000-00805f9b34fb")
+    val BATTERY_LEVEL:          UUID = UUID.fromString("00002a19-0000-1000-8000-00805f9b34fb")
 }
 
 object FtOpcode {
