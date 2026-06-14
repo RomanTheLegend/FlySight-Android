@@ -78,8 +78,11 @@ class ScoreViewViewModel : ViewModel() {
 
         if (listOf(iHMSL, iVelN, iVelE, iVelD).any { it < 0 }) return emptyList()
 
+        // Skip header + optional units row (starts with ',' or '(')
+        val hasUnitsRow = lines.size > 1 &&
+            lines[1].trimStart().let { it.startsWith(",") || it.startsWith("(") }
         val result = mutableListOf<DataPoint>()
-        for (line in lines.drop(2)) {
+        for (line in lines.drop(if (hasUnitsRow) 2 else 1)) {
             val cols = line.split(",")
             val hMSL = cols.getOrNull(iHMSL)?.toDoubleOrNull() ?: continue
             val velN = cols.getOrNull(iVelN)?.toDoubleOrNull() ?: continue

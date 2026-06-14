@@ -108,7 +108,7 @@ class FileViewActivity : AppCompatActivity() {
             hSpdE.add(Entry(t, p.hSpeed.toFloat()))
             vSpdE.add(Entry(t, p.vSpeed.toFloat()))
             totE.add(Entry(t,  p.totalSpeed.toFloat()))
-            grE.add(Entry(t,   p.glideRatio.toFloat()))
+            grE.add(Entry(t,   p.glideRatio.coerceIn(-50.0, 50.0).toFloat()))
         }
 
         val colorElev   = getColor(R.color.colorChartElevation)
@@ -144,7 +144,7 @@ class FileViewActivity : AppCompatActivity() {
 
         // Lock axis ranges so toggling series visibility never rescales the chart
         val leftMax = (points.maxOf { maxOf(it.hSpeed, it.vSpeed, it.totalSpeed,
-            it.glideRatio.coerceAtLeast(0.0)) }.coerceAtLeast(1.0) * 1.1).toFloat()
+            it.glideRatio.coerceIn(0.0, 50.0)) }.coerceAtLeast(1.0) * 1.1).toFloat()
         chart.axisLeft.axisMinimum = 0f
         chart.axisLeft.axisMaximum = leftMax
 
@@ -262,7 +262,7 @@ class FileViewActivity : AppCompatActivity() {
         binding.tvHSpeedValue.text = "%.1f".format(p.hSpeed)
         binding.tvVSpeedValue.text = "%.1f".format(p.vSpeed)
         binding.tvTotalValue.text  = "%.1f".format(p.totalSpeed)
-        binding.tvGRValue.text     = if (p.glideRatio.isNaN()) "—" else "%.2f".format(p.glideRatio)
+        binding.tvGRValue.text     = if (p.glideRatio.isNaN()) "—" else "%.2f".format(p.glideRatio.coerceIn(-50.0, 50.0))
     }
 
     private fun initProgressBar(totalSize: Long) {

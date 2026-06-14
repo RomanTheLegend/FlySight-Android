@@ -327,7 +327,7 @@ class ScoreViewActivity : AppCompatActivity() {
         binding.tvPenaltyValue.setTextColor(
             if (pct == 0) getColor(R.color.colorPrimary) else getColor(R.color.colorDanger))
         binding.tvAdjDistValue.text  = "%.0f".format(score.distanceM * factor)
-        binding.tvAdjTimeValue.text  = "%.2f".format(score.timeSec)
+        binding.tvAdjTimeValue.text  = "%.2f".format(score.timeSec * factor)
         binding.tvAdjSpeedValue.text = "%.1f".format(score.speedKmh  * factor)
 
         binding.scoreCard.visibility = View.VISIBLE
