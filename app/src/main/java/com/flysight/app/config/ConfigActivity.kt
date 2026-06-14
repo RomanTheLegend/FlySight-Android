@@ -102,6 +102,14 @@ class ConfigActivity : AppCompatActivity() {
                 binding.tvEmpty.visibility = View.GONE
                 val label = if (originalText.isBlank()) "defaults" else "${settingsItems.count { it !is SettingItem.Section }} settings"
                 setStatus("$label loaded")
+            } catch (e: java.io.FileNotFoundException) {
+                originalText = ""
+                settingsItems = buildItems(emptyMap())
+                settingsAdapter = SettingsAdapter(settingsItems)
+                binding.recyclerSettings.adapter = settingsAdapter
+                binding.recyclerSettings.visibility = View.VISIBLE
+                binding.tvEmpty.visibility = View.GONE
+                setStatus("No config found — showing defaults")
             } catch (e: Exception) {
                 setStatus("Read error: ${e.message}")
                 Toast.makeText(this@ConfigActivity, "Read failed: ${e.message}", Toast.LENGTH_LONG).show()

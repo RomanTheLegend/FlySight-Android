@@ -209,13 +209,11 @@ class BleManager(private val context: Context) {
             ?: emptySet()
         bondedAddresses = bonded.map { it.address }.toSet()
 
-        // Add any bonded device not already in the list
         val current = _scanned.value.toMutableList()
         for (dev in bonded) {
-            if (current.none { it.device.address == dev.address }) {
-                current.add(0, ScannedDevice(dev, dev.name ?: dev.address,
-                    RSSI_UNKNOWN, false, isPaired = true))
-            }
+            val idx = current.indexOfFirst { it.device.address == dev.address }
+            val entry = ScannedDevice(dev, dev.displayName(), RSSI_UNKNOWN, false, isPaired = true)
+            if (idx >= 0) current[idx] = entry else current.add(0, entry)
         }
         _scanned.value = current
     }
@@ -223,7 +221,7 @@ class BleManager(private val context: Context) {
     private fun bondedDeviceEntries(): List<ScannedDevice> =
         btAdapter?.bondedDevices
             ?.filter { it.address in bondedAddresses }
-            ?.map { ScannedDevice(it, it.name ?: it.address, RSSI_UNKNOWN, false, isPaired = true) }
+            ?.map { ScannedDevice(it, it.displayName(), RSSI_UNKNOWN, false, isPaired = true) }
             ?: emptyList()
 
     private val scanCb = object : ScanCallback() {
@@ -234,7 +232,7 @@ class BleManager(private val context: Context) {
             if (manuf == null && !isPaired) return
             val isPairing = manuf != null && manuf.isNotEmpty() && manuf[0] == 0x01.toByte()
             val name  = result.scanRecord?.deviceName
-                ?: result.device.name
+                ?: result.device.displayName()
                 ?: result.device.address
             val entry = ScannedDevice(result.device, name, result.rssi, isPairing, isPaired)
             val list  = _scanned.value.toMutableList()
@@ -393,7 +391,11 @@ class BleManager(private val context: Context) {
 
         drain()
         rawWrite(cmd)
-        waitAck(FtOpcode.READ_FILE) ?: error("Read NAK/timeout for $path")
+        when (waitAck(FtOpcode.READ_FILE)) {
+            null  -> error("Read timeout for $path")
+            false -> throw java.io.FileNotFoundException(path)
+            else  -> {}
+        }
 
         val buf = ByteArrayOutputStream()
         var expected = 0
@@ -689,3 +691,8 @@ class BleManager(private val context: Context) {
         scope.cancel()
     }
 }
+
+@SuppressLint("NewApi")
+private fun BluetoothDevice.displayName(): String =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) alias ?: name ?: address
+    else name ?: address

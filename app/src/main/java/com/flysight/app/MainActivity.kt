@@ -50,6 +50,13 @@ class MainActivity : AppCompatActivity() {
         else Toast.makeText(this, "Bluetooth permissions are required", Toast.LENGTH_LONG).show()
     }
 
+    private val permissionOnlyLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { results ->
+        if (results.values.all { it }) ble.refreshBondedDevices()
+        else Toast.makeText(this, "Bluetooth permissions are required", Toast.LENGTH_LONG).show()
+    }
+
     private val enableBtLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { startScan() }
@@ -146,6 +153,8 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+
+        requestPermissionsIfNeeded()
     }
 
     override fun onResume() {
@@ -214,6 +223,18 @@ class MainActivity : AppCompatActivity() {
         binding.panelScanActive.visibility = View.VISIBLE
         binding.tvScanCount.text           = ""
         binding.tvEmpty.visibility         = View.GONE
+    }
+
+    private fun requestPermissionsIfNeeded() {
+        val required = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+            listOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT)
+        else
+            listOf(Manifest.permission.BLUETOOTH, Manifest.permission.BLUETOOTH_ADMIN,
+                Manifest.permission.ACCESS_FINE_LOCATION)
+        val missing = required.filter {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }
+        if (missing.isNotEmpty()) permissionOnlyLauncher.launch(missing.toTypedArray())
     }
 
     private fun checkPermissionsAndScan() {
