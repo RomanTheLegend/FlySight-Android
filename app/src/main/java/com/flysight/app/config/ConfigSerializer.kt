@@ -31,6 +31,11 @@ object ConfigSerializer {
                         knownKeys.add(item.key)
                     }
                 }
+                is SettingItem.Slider -> {
+                    item.hint?.let { sb.append("; $it\n") }
+                    sb.append("${item.key}: ${item.value}\n")
+                    knownKeys.add(item.key)
+                }
                 is SettingItem.CoordPicker -> {
                     item.hint?.let { sb.append("; $it\n") }
                     if (item.latRaw.isNotBlank()) {

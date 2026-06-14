@@ -189,6 +189,9 @@ class ConfigActivity : AppCompatActivity() {
             SettingItem.Toggle(key, label, (s[key]?.toIntOrNull() ?: 0) != 0, hint = hint)
         fun num(key: String, label: String, unit: String = "", def: String = "0", hint: String? = null) =
             SettingItem.NumberInput(key, label, s[key] ?: def, unit, hint = hint)
+        fun slider(key: String, label: String, min: Int, max: Int, def: Int = 0, hint: String? = null) =
+            SettingItem.Slider(key, label, min, max,
+                (s[key]?.toIntOrNull() ?: def).coerceIn(min, max), hint = hint)
 
         val gpsModelOpts = listOf("Portable", "Stationary", "Pedestrian", "Automotive",
                                    "Sea", "Airborne <1G", "Airborne <2G", "Airborne <4G")
@@ -256,7 +259,7 @@ class ConfigActivity : AppCompatActivity() {
                 listOf("No Tone", "Min/Max Tone", "Chirp Up/Down", "Chirp Down/Up"),
                 listOf("0", "1", "2", "3"),
                 hint = "What happens when your value goes outside the Min–Max range: silence, clamp to the limit tone, or play a chirp."))
-            add(num("Volume", "Volume", "(0–8)", "6",
+            add(slider("Volume", "Volume", 0, 8, 6,
                 hint = "Volume for all tones, including alarm tones (0–8)."))
 
             // ── Tone Rate ────────────────────────────────────────────────────
@@ -278,7 +281,7 @@ class ConfigActivity : AppCompatActivity() {
             add(SettingItem.Section("Speech"))
             add(num("Sp_Rate", "Rate", "s", "0",
                 hint = "How often a value is spoken aloud. Set to 0 to disable. Typical: 3–10 seconds."))
-            add(num("Sp_Volume", "Volume", "(0–8)", "6",
+            add(slider("Sp_Volume", "Volume", 0, 8, 6,
                 hint = "Volume for speech and any audio files played as alarms (0–8)."))
             add(choice("Sp_Mode", "Mode", spModeOpts, spModeVals,
                 hint = "Which measurement is spoken aloud."))
@@ -286,7 +289,7 @@ class ConfigActivity : AppCompatActivity() {
                 listOf("km/h or m", "mph or feet"),
                 listOf("0", "1"),
                 hint = "Units used when speaking values. Independent of display units."))
-            add(num("Sp_Dec", "Decimal Places", "", "1",
+            add(slider("Sp_Dec", "Decimal Places", 0, 2, 1,
                 hint = "Decimal places in the spoken value. Use 0 for speed (e.g. 'two one zero'), 1 for glide ratio (e.g. 'two point five')."))
 
             // ── Thresholds ───────────────────────────────────────────────────
@@ -338,17 +341,17 @@ class ConfigActivity : AppCompatActivity() {
             add(toggle("Enable_Mag",     "Magnetometer"))
             add(toggle("Enable_Raw",     "Raw Sensor Data"))
             add(toggle("Cold_Start",     "Cold Start"))
-            add(num("Ble_Tx_Power",      "BLE TX Power", "(0–31)", "25"))
+            add(slider("Ble_Tx_Power", "BLE TX Power", 0, 31, 25))
 
             // ── Sensor Settings ──────────────────────────────────────────────
             add(SettingItem.Section("Sensor Settings"))
-            add(num("Baro_ODR",  "Barometer ODR",       "(0–7)",  "2"))
-            add(num("Hum_ODR",   "Humidity ODR",        "(0–3)",  "1"))
-            add(num("Mag_ODR",   "Magnetometer ODR",    "(0–3)",  "0"))
-            add(num("Accel_ODR", "Accelerometer ODR",   "(0–11)", "1"))
-            add(num("Accel_FS",  "Accelerometer FS",    "(0–3)",  "1"))
-            add(num("Gyro_ODR",  "Gyroscope ODR",       "(0–10)", "1"))
-            add(num("Gyro_FS",   "Gyroscope FS",        "(0–3)",  "3"))
+            add(slider("Baro_ODR",  "Barometer ODR",      0, 7,  2))
+            add(slider("Hum_ODR",   "Humidity ODR",       0, 3,  1))
+            add(slider("Mag_ODR",   "Magnetometer ODR",   0, 3,  0))
+            add(slider("Accel_ODR", "Accelerometer ODR",  0, 11, 1))
+            add(slider("Accel_FS",  "Accelerometer FS",   0, 3,  1))
+            add(slider("Gyro_ODR",  "Gyroscope ODR",      0, 10, 1))
+            add(slider("Gyro_FS",   "Gyroscope FS",       0, 3,  3))
 
             // ── ActiveLook ───────────────────────────────────────────────────
             add(SettingItem.Section("ActiveLook"))

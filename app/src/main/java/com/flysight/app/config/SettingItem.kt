@@ -7,6 +7,7 @@ sealed class SettingItem {
         const val VIEW_CHOICE  = 2
         const val VIEW_NUMBER  = 3
         const val VIEW_COORD   = 4
+        const val VIEW_SLIDER  = 5
     }
     abstract val viewType: Int
 
@@ -44,6 +45,17 @@ sealed class SettingItem {
         val hint: String? = null
     ) : SettingItem() {
         override val viewType = VIEW_NUMBER
+    }
+
+    data class Slider(
+        val key: String,
+        val label: String,
+        val min: Int,
+        val max: Int,
+        var value: Int,
+        val hint: String? = null
+    ) : SettingItem() {
+        override val viewType = VIEW_SLIDER
     }
 
     class CoordPicker(

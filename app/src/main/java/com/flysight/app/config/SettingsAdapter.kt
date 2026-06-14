@@ -7,6 +7,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
+import android.widget.SeekBar
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.SwitchCompat
@@ -41,8 +42,9 @@ class SettingsAdapter(private val allItems: List<SettingItem>) :
             SettingItem.VIEW_SECTION -> SectionVH(inf.inflate(R.layout.item_setting_section, parent, false))
             SettingItem.VIEW_TOGGLE  -> ToggleVH(inf.inflate(R.layout.item_setting_toggle,  parent, false))
             SettingItem.VIEW_CHOICE  -> ChoiceVH(inf.inflate(R.layout.item_setting_choice,  parent, false))
-            SettingItem.VIEW_COORD   -> CoordPickerVH(inf.inflate(R.layout.item_setting_coord, parent, false))
-            else                     -> NumberVH(inf.inflate(R.layout.item_setting_number,  parent, false))
+            SettingItem.VIEW_COORD   -> CoordPickerVH(inf.inflate(R.layout.item_setting_coord,  parent, false))
+            SettingItem.VIEW_SLIDER  -> SliderVH(inf.inflate(R.layout.item_setting_slider,  parent, false))
+            else                     -> NumberVH(inf.inflate(R.layout.item_setting_number,   parent, false))
         }
     }
 
@@ -53,6 +55,7 @@ class SettingsAdapter(private val allItems: List<SettingItem>) :
             is SettingItem.Choice      -> (holder as ChoiceVH).bind(item)
             is SettingItem.NumberInput -> (holder as NumberVH).bind(item)
             is SettingItem.CoordPicker -> (holder as CoordPickerVH).bind(item)
+            is SettingItem.Slider      -> (holder as SliderVH).bind(item)
         }
     }
 
@@ -165,6 +168,29 @@ class SettingsAdapter(private val allItems: List<SettingItem>) :
             tvUnit.visibility = if (item.unit.isEmpty()) View.GONE else View.VISIBLE
             bindHint(btnHint, item.hint)
             bound = item
+        }
+    }
+
+    class SliderVH(view: View) : RecyclerView.ViewHolder(view) {
+        private val tvLabel: TextView = view.findViewById(R.id.tvLabel)
+        private val tvValue: TextView = view.findViewById(R.id.tvValue)
+        private val sbValue: SeekBar  = view.findViewById(R.id.sbValue)
+        private val btnHint: TextView = view.findViewById(R.id.btnHint)
+
+        fun bind(item: SettingItem.Slider) {
+            tvLabel.text = item.label
+            sbValue.max  = item.max - item.min
+            sbValue.progress = (item.value - item.min).coerceIn(0, item.max - item.min)
+            tvValue.text = item.value.toString()
+            sbValue.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(sb: SeekBar, progress: Int, fromUser: Boolean) {
+                    item.value = item.min + progress
+                    tvValue.text = item.value.toString()
+                }
+                override fun onStartTrackingTouch(sb: SeekBar) {}
+                override fun onStopTrackingTouch(sb: SeekBar) {}
+            })
+            bindHint(btnHint, item.hint)
         }
     }
 
