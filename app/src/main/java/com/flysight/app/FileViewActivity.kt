@@ -197,8 +197,7 @@ class FileViewActivity : AppCompatActivity() {
         chart.isDoubleTapToZoomEnabled = true
 
         chart.post {
-            val minVisibleSeconds = (chart.width / 10f).coerceAtLeast(1f)
-            chart.setVisibleXRangeMinimum(minVisibleSeconds)
+            chart.setVisibleXRangeMinimum(1f)
         }
         chart.moveViewToX(0f)
 

@@ -93,7 +93,7 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, ScoreViewActivity::class.java))
         }
         binding.btnCompareTracks.setOnClickListener {
-            Toast.makeText(this, "Compare tracks — coming soon", Toast.LENGTH_SHORT).show()
+            startActivity(Intent(this, CompareTracksActivity::class.java))
         }
         binding.btnSettings.setOnClickListener {
             startActivity(Intent(this, ConfigActivity::class.java))

@@ -60,5 +60,9 @@
             android:name=".ScoreViewActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".CompareTracksActivity"
+            android:exported="false" />
+
     </application>
 </manifest>
