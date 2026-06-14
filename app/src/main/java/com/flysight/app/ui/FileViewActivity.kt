@@ -77,6 +77,7 @@ class FileViewActivity : AppCompatActivity() {
                             viewModel.load(path, totalSize, (application as FlySightApp).bleManager)
                         }
                     }
+                    is LoadState.Parsing -> setStatus("Analyzing…")
                     is LoadState.Loading -> {
                         if (state.total > 0) {
                             binding.progressBar.isIndeterminate = false

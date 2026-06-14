@@ -171,7 +171,7 @@ class CompareTracksActivity : AppCompatActivity() {
                 val nameView  = if (slot == 1) binding.tvTrack1Name   else binding.tvTrack2Name
                 val pb        = if (slot == 1) binding.pbTrack1        else binding.pbTrack2
                 val otherBtn  = if (slot == 1) binding.btnSelectTrack2 else binding.btnSelectTrack1
-                val loading   = state is LoadState.Loading
+                val loading   = state is LoadState.Loading || state is LoadState.Parsing
                 otherBtn.isEnabled = !loading
                 otherBtn.alpha     = if (loading) 0.4f else 1f
                 when (state) {
@@ -190,6 +190,11 @@ class CompareTracksActivity : AppCompatActivity() {
                             pb.isIndeterminate = true
                             nameView.text = if (state.received > 0) state.received.formatFileSize() else "Loading…"
                         }
+                    }
+                    is LoadState.Parsing -> {
+                        pb.visibility = View.VISIBLE
+                        pb.isIndeterminate = true
+                        nameView.text = "Analyzing…"
                     }
                     is LoadState.Loaded -> {
                         pb.visibility = View.GONE

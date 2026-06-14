@@ -38,6 +38,7 @@ import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.MapEventsOverlay
 import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.Polygon
 import org.osmdroid.views.overlay.Polyline
 
 class ScoreViewActivity : AppCompatActivity() {
@@ -62,6 +63,7 @@ class ScoreViewActivity : AppCompatActivity() {
     private var lockInMarker:   Marker?   = null
     private var trackPolyline:  Polyline? = null
     private var lanePolyline:   Polyline? = null
+    private var lanePolygon:    Polygon?  = null
     private var laneLeft150:    Polyline? = null
     private var laneRight150:   Polyline? = null
     private var laneLeft300:    Polyline? = null
@@ -141,6 +143,12 @@ class ScoreViewActivity : AppCompatActivity() {
                 when (state) {
                     is LoadState.Idle    -> Unit
                     is LoadState.Loading -> updateProgress(state)
+                    is LoadState.Parsing -> {
+                        binding.tvSubtitle.text = "Analyzing…"
+                        binding.tvStatus.text   = "Analyzing…"
+                        binding.progressBar.isIndeterminate = true
+                        binding.tvProgressBytes.visibility  = View.GONE
+                    }
                     is LoadState.Loaded  -> onTrackLoaded(state.points)
                     is LoadState.Failed  -> {
                         Toast.makeText(this@ScoreViewActivity, state.msg, Toast.LENGTH_LONG).show()
@@ -353,6 +361,7 @@ class ScoreViewActivity : AppCompatActivity() {
         val map = binding.mapView
         trackPolyline?.let  { map.overlays.remove(it) }
         lanePolyline?.let   { map.overlays.remove(it) }
+        lanePolygon?.let    { map.overlays.remove(it) }
         lockInMarker?.let   { map.overlays.remove(it) }
         laneLeft150?.let    { map.overlays.remove(it) }
         laneRight150?.let   { map.overlays.remove(it) }
@@ -388,6 +397,33 @@ class ScoreViewActivity : AppCompatActivity() {
         val lockInT  = FlySightCalc.laneLockInTime(points) ?: 9.0
         val lockIn   = DataProcessor.interpolateAt(points, lockInT)
         val extended = FlySightCalc.extendLane(lockIn.lat, lockIn.lon, tgtLat, tgtLon, 8047.0)
+
+        val latA    = Math.toRadians(lockIn.lat); val lonA = Math.toRadians(lockIn.lon)
+        val latB    = Math.toRadians(tgtLat);     val lonB = Math.toRadians(tgtLon)
+        val laneBrg = atan2(sin(lonB - lonA) * cos(latB),
+                            cos(latA) * sin(latB) - sin(latA) * cos(latB) * cos(lonB - lonA))
+        val perpRight = laneBrg + PI / 2
+        val perpLeft  = laneBrg - PI / 2
+        val half = FlySightCalc.LANE_WIDTH / 2
+
+        // Semi-transparent filled rectangle for the official lane (±300 m from centre)
+        val laneBase = getColor(R.color.colorMapLane)
+        lanePolygon = Polygon().also { poly ->
+            fun corner(fromLat: Double, fromLon: Double, brg: Double): GeoPoint {
+                val pt = FlySightCalc.pointAtBearing(fromLat, fromLon, brg, half)
+                return GeoPoint(pt.lat, pt.lon)
+            }
+            poly.fillPaint.color          = Color.argb(50,  Color.red(laneBase), Color.green(laneBase), Color.blue(laneBase))
+            poly.outlinePaint.color       = Color.argb(0,   0, 0, 0)
+            poly.setPoints(listOf(
+                corner(lockIn.lat,   lockIn.lon,   perpLeft),
+                corner(extended.lat, extended.lon, perpLeft),
+                corner(extended.lat, extended.lon, perpRight),
+                corner(lockIn.lat,   lockIn.lon,   perpRight)
+            ))
+            map.overlays.add(poly)
+        }
+
         lanePolyline = Polyline().also { poly ->
             poly.outlinePaint.color       = getColor(R.color.colorMapLane)
             poly.outlinePaint.strokeWidth = 3f
@@ -404,10 +440,6 @@ class ScoreViewActivity : AppCompatActivity() {
         map.overlays.add(lockInMarker)
 
         // Parallel boundary lines at ±150 m and ±300 m from the lane centre
-        val latA    = Math.toRadians(lockIn.lat); val lonA = Math.toRadians(lockIn.lon)
-        val latB    = Math.toRadians(tgtLat);     val lonB = Math.toRadians(tgtLon)
-        val laneBrg = atan2(sin(lonB - lonA) * cos(latB),
-                            cos(latA) * sin(latB) - sin(latA) * cos(latB) * cos(lonB - lonA))
 
         fun offsetLane(bearing: Double, distM: Double): List<GeoPoint> {
             fun off(lat: Double, lon: Double) =
@@ -429,9 +461,6 @@ class ScoreViewActivity : AppCompatActivity() {
                 map.overlays.add(poly)
             }
 
-        val perpRight = laneBrg + PI / 2
-        val perpLeft  = laneBrg - PI / 2
-        val half = FlySightCalc.LANE_WIDTH / 2
         laneLeft150  = parallelLine(perpLeft,  half + 150.0, 160, 1.5f, 16f, 12f)
         laneRight150 = parallelLine(perpRight, half + 150.0, 160, 1.5f, 16f, 12f)
         laneLeft300  = parallelLine(perpLeft,  half + 300.0, 160, 1.0f, 10f, 14f)
