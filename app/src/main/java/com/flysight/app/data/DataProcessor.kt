@@ -1,4 +1,4 @@
-package com.flysight.app
+package com.flysight.app.data
 
 import kotlin.math.*
 

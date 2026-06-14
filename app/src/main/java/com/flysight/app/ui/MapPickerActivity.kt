@@ -1,4 +1,4 @@
-package com.flysight.app
+package com.flysight.app.ui
 
 import android.Manifest
 import android.content.Intent

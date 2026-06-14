@@ -1,7 +1,7 @@
 package com.flysight.app.calc
 
-import com.flysight.app.DataPoint
-import com.flysight.app.DataProcessor
+import com.flysight.app.data.DataPoint
+import com.flysight.app.data.DataProcessor
 import kotlin.math.*
 
 object FlySightCalc {

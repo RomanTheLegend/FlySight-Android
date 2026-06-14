@@ -1,4 +1,4 @@
-package com.flysight.app
+package com.flysight.app.ui
 
 import android.content.Intent
 import android.os.Bundle
@@ -19,10 +19,14 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.flysight.app.ble.BleState
+import com.flysight.app.FlySightApp
+import com.flysight.app.R
 import com.flysight.app.ble.CONFIG_PATH
 import com.flysight.app.ble.DirEntry
+import com.flysight.app.config.ConfigActivity
 import com.flysight.app.databinding.ActivityFileBrowserBinding
+import com.flysight.app.util.finishOnBleDisconnect
+import com.flysight.app.util.formatFileSize
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -124,11 +128,7 @@ class FileBrowserActivity : AppCompatActivity() {
             finish()
         }
 
-        lifecycleScope.launch {
-            ble.state.collectLatest { state ->
-                if (state == BleState.Disconnected) finish()
-            }
-        }
+        finishOnBleDisconnect(ble)
 
         lifecycleScope.launch {
             ble.batteryLevel.collectLatest { level ->
@@ -290,7 +290,7 @@ class FileListAdapter(
             })
         } else {
             holder.tvChevron.visibility = View.GONE
-            holder.tvMeta.text          = formatSize(entry.size)
+            holder.tvMeta.text          = entry.size.formatFileSize()
             holder.tvMeta.visibility    = View.VISIBLE
             holder.ivIcon.setImageResource(R.drawable.ic_file_config)
         }
@@ -305,9 +305,4 @@ class FileListAdapter(
         }
     }
 
-    private fun formatSize(bytes: Long): String = when {
-        bytes >= 1_048_576 -> "%.1f MB".format(bytes / 1_048_576.0)
-        bytes >= 1_024     -> "%.1f KB".format(bytes / 1_024.0)
-        else               -> "$bytes B"
-    }
 }

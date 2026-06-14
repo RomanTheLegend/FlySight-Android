@@ -23,7 +23,11 @@ import com.flysight.app.ble.BleManager
 import com.flysight.app.ble.BleState
 import com.flysight.app.ble.RSSI_UNKNOWN
 import com.flysight.app.ble.ScannedDevice
+import com.flysight.app.config.ConfigActivity
 import com.flysight.app.databinding.ActivityMainBinding
+import com.flysight.app.ui.CompareTracksActivity
+import com.flysight.app.ui.FileBrowserActivity
+import com.flysight.app.ui.ScoreViewActivity
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 

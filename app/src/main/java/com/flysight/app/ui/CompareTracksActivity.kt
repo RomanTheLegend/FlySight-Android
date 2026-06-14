@@ -1,4 +1,4 @@
-package com.flysight.app
+package com.flysight.app.ui
 
 import android.content.res.Configuration
 import android.graphics.Color
@@ -11,8 +11,14 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.flysight.app.ble.BleState
+import com.flysight.app.FlySightApp
+import com.flysight.app.R
+import com.flysight.app.data.DataPoint
 import com.flysight.app.databinding.ActivityCompareTracksBinding
+import com.flysight.app.util.finishOnBleDisconnect
+import com.flysight.app.util.formatFileSize
+import com.flysight.app.viewmodel.CompareTracksViewModel
+import com.flysight.app.viewmodel.LoadState
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.components.YAxis
 import com.github.mikephil.charting.data.Entry
@@ -81,9 +87,7 @@ class CompareTracksActivity : AppCompatActivity() {
         observeTrack(1, viewModel.track1, ble)
         observeTrack(2, viewModel.track2, ble)
 
-        lifecycleScope.launch {
-            ble.state.collectLatest { if (it == BleState.Disconnected) finish() }
-        }
+        finishOnBleDisconnect(ble)
     }
 
     // ── Browse ────────────────────────────────────────────────────────────────
@@ -181,10 +185,10 @@ class CompareTracksActivity : AppCompatActivity() {
                             pb.isIndeterminate = false
                             pb.max      = state.total.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
                             pb.progress = state.received.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
-                            nameView.text = formatBytes(state.received) + " / " + formatBytes(state.total)
+                            nameView.text = state.received.formatFileSize() + " / " + state.total.formatFileSize()
                         } else {
                             pb.isIndeterminate = true
-                            nameView.text = if (state.received > 0) formatBytes(state.received) else "Loading…"
+                            nameView.text = if (state.received > 0) state.received.formatFileSize() else "Loading…"
                         }
                     }
                     is LoadState.Loaded -> {
@@ -359,11 +363,6 @@ class CompareTracksActivity : AppCompatActivity() {
             .let { if (it < 0) pts.size - 1 else it }
             .coerceIn(0, pts.size - 1)
         return pts[idx]
-    }
-
-    private fun formatBytes(bytes: Long): String = when {
-        bytes >= 1_048_576 -> "%.1f MB".format(bytes / 1_048_576.0)
-        else               -> "${bytes / 1024} KB"
     }
 
     private fun subtitle(): String = when {

@@ -1,40 +1,8 @@
-package com.flysight.app
+package com.flysight.app.data
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.flysight.app.ble.BleManager
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
+object CsvParser {
 
-class ScoreViewViewModel : ViewModel() {
-
-    private val _loadState = MutableStateFlow<LoadState>(LoadState.Idle)
-    val loadState: StateFlow<LoadState> = _loadState.asStateFlow()
-
-    fun load(path: String, totalSize: Long, ble: BleManager) {
-        if (_loadState.value !is LoadState.Idle) return
-        _loadState.value = LoadState.Loading(0, totalSize)
-        viewModelScope.launch {
-            try {
-                val bytes = ble.readFile(path, totalSize) { received, total ->
-                    _loadState.value = LoadState.Loading(received, total)
-                }
-                val points = parseCsv(String(bytes, Charsets.UTF_8))
-                _loadState.value = if (points.isEmpty()) LoadState.Failed("No data points found")
-                                   else LoadState.Loaded(points)
-            } catch (e: Exception) {
-                _loadState.value = LoadState.Failed(e.message ?: "Unknown error")
-            }
-        }
-    }
-
-    fun reset() {
-        _loadState.value = LoadState.Idle
-    }
-
-    private fun parseCsv(text: String): List<DataPoint> {
+    fun parse(text: String): List<DataPoint> {
         val lines = text.lines().filter { it.isNotBlank() }
         if (lines.isEmpty()) return emptyList()
         val raw = if (lines.first().trimStart().startsWith("\$")) parseNew(lines) else parseOld(lines)
@@ -67,7 +35,7 @@ class ScoreViewViewModel : ViewModel() {
     }
 
     private fun parseOld(lines: List<String>): List<DataPoint> {
-        if (lines.size < 3) return emptyList()
+        if (lines.size < 2) return emptyList()
         val headers = lines[0].split(",").map { it.trim() }
         fun col(name: String) = headers.indexOf(name)
 
@@ -78,7 +46,6 @@ class ScoreViewViewModel : ViewModel() {
 
         if (listOf(iHMSL, iVelN, iVelE, iVelD).any { it < 0 }) return emptyList()
 
-        // Skip header + optional units row (starts with ',' or '(')
         val hasUnitsRow = lines.size > 1 &&
             lines[1].trimStart().let { it.startsWith(",") || it.startsWith("(") }
         val result = mutableListOf<DataPoint>()
@@ -105,7 +72,5 @@ class ScoreViewViewModel : ViewModel() {
 
     private fun parseIsoMs(s: String): Long = try {
         java.time.Instant.parse(s.trim()).toEpochMilli()
-    } catch (e: Exception) {
-        0L
-    }
+    } catch (e: Exception) { 0L }
 }

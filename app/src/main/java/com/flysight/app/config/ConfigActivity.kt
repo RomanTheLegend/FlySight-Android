@@ -1,4 +1,4 @@
-package com.flysight.app
+package com.flysight.app.config
 
 import android.content.Intent
 import android.os.Bundle
@@ -9,14 +9,12 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.flysight.app.FlySightApp
 import com.flysight.app.ble.BleManager
 import com.flysight.app.ble.BleState
 import com.flysight.app.ble.CONFIG_PATH
-import com.flysight.app.config.ConfigParser
-import com.flysight.app.config.ConfigSerializer
-import com.flysight.app.config.SettingItem
-import com.flysight.app.config.SettingsAdapter
 import com.flysight.app.databinding.ActivityConfigBinding
+import com.flysight.app.ui.MapPickerActivity
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 

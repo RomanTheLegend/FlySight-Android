@@ -1,4 +1,4 @@
-package com.flysight.app
+package com.flysight.app.ui
 
 import android.content.res.Configuration
 import android.graphics.Color
@@ -9,7 +9,13 @@ import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import com.flysight.app.FlySightApp
+import com.flysight.app.R
+import com.flysight.app.data.DataPoint
+import com.flysight.app.data.TrackCache
 import com.flysight.app.databinding.ActivityFileViewBinding
+import com.flysight.app.viewmodel.FileViewViewModel
+import com.flysight.app.viewmodel.LoadState
 import com.github.mikephil.charting.components.Legend
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.components.YAxis

@@ -40,28 +40,28 @@
         </activity>
 
         <activity
-            android:name=".ConfigActivity"
+            android:name=".config.ConfigActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
 
         <activity
-            android:name=".FileBrowserActivity"
+            android:name=".ui.FileBrowserActivity"
             android:exported="false" />
 
         <activity
-            android:name=".FileViewActivity"
+            android:name=".ui.FileViewActivity"
             android:exported="false" />
 
         <activity
-            android:name=".MapPickerActivity"
+            android:name=".ui.MapPickerActivity"
             android:exported="false" />
 
         <activity
-            android:name=".ScoreViewActivity"
+            android:name=".ui.ScoreViewActivity"
             android:exported="false" />
 
         <activity
-            android:name=".CompareTracksActivity"
+            android:name=".ui.CompareTracksActivity"
             android:exported="false" />
 
     </application>

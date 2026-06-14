@@ -1,4 +1,4 @@
-package com.flysight.app
+package com.flysight.app.ui
 
 import android.content.Intent
 import android.graphics.Bitmap
@@ -16,10 +16,17 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.flysight.app.FlySightApp
+import com.flysight.app.R
 import com.flysight.app.ble.BleManager
-import com.flysight.app.ble.BleState
 import com.flysight.app.calc.FlySightCalc
+import com.flysight.app.data.DataPoint
+import com.flysight.app.data.DataProcessor
+import com.flysight.app.data.TrackCache
 import com.flysight.app.databinding.ActivityScoreViewBinding
+import com.flysight.app.util.finishOnBleDisconnect
+import com.flysight.app.viewmodel.LoadState
+import com.flysight.app.viewmodel.ScoreViewViewModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
@@ -137,9 +144,7 @@ class ScoreViewActivity : AppCompatActivity() {
             }
         }
 
-        lifecycleScope.launch {
-            ble.state.collectLatest { if (it == BleState.Disconnected) finish() }
-        }
+        finishOnBleDisconnect(ble)
 
         pathStack.addLast("")
         loadDirectory()
