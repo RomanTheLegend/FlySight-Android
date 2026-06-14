@@ -2,6 +2,7 @@ package com.flysight.app.ui
 
 import android.content.Intent
 import android.graphics.Bitmap
+import kotlin.math.*
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.DashPathEffect
@@ -58,18 +59,23 @@ class ScoreViewActivity : AppCompatActivity() {
     private var trackTitle:   String            = "Run Score"
 
     private var targetMarker:   Marker?   = null
+    private var lockInMarker:   Marker?   = null
     private var trackPolyline:  Polyline? = null
     private var lanePolyline:   Polyline? = null
+    private var laneLeft150:    Polyline? = null
+    private var laneRight150:   Polyline? = null
+    private var laneLeft300:    Polyline? = null
+    private var laneRight300:   Polyline? = null
     private var exitMarker:     Marker?   = null
     private var gate2500Marker: Marker?   = null
     private var gate1500Marker: Marker?   = null
 
-    // High-visibility colors against OSM's green/orange/tan/navy palette
-    private val colorExit     = Color.parseColor("#FFD600")  // yellow
-    private val colorGate2500 = Color.parseColor("#FF00AA")  // magenta
-    private val colorGate1500 = Color.parseColor("#00E5FF")  // cyan
-    private val colorTarget   = Color.WHITE
-    private val colorTrack    = Color.parseColor("#FF3333")  // red
+    private val colorExit     by lazy { getColor(R.color.colorMapExit) }
+    private val colorGate2500 by lazy { getColor(R.color.colorMapGate2500) }
+    private val colorGate1500 by lazy { getColor(R.color.colorMapGate1500) }
+    private val colorTarget   by lazy { getColor(R.color.colorMapTarget) }
+    private val colorTrack    by lazy { getColor(R.color.colorMapTrack) }
+    private val colorLockIn   by lazy { getColor(R.color.colorMapLane) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -325,7 +331,7 @@ class ScoreViewActivity : AppCompatActivity() {
         val lockIn   = DataProcessor.interpolateAt(points, lockInT)
         val extended = FlySightCalc.extendLane(lockIn.lat, lockIn.lon, tgtLat, tgtLon, 8047.0)
         val pct      = FlySightCalc.penaltyPercent(
-            points, lockIn.lat, lockIn.lon, extended.lat, extended.lon, dzElevM)
+            points, lockInT, lockIn.lat, lockIn.lon, extended.lat, extended.lon, dzElevM)
 
         val factor = 1.0 - pct / 100.0
         binding.tvPenaltyValue.text  = "$pct%"
@@ -347,6 +353,11 @@ class ScoreViewActivity : AppCompatActivity() {
         val map = binding.mapView
         trackPolyline?.let  { map.overlays.remove(it) }
         lanePolyline?.let   { map.overlays.remove(it) }
+        lockInMarker?.let   { map.overlays.remove(it) }
+        laneLeft150?.let    { map.overlays.remove(it) }
+        laneRight150?.let   { map.overlays.remove(it) }
+        laneLeft300?.let    { map.overlays.remove(it) }
+        laneRight300?.let   { map.overlays.remove(it) }
         exitMarker?.let     { map.overlays.remove(it) }
         gate2500Marker?.let { map.overlays.remove(it) }
         gate1500Marker?.let { map.overlays.remove(it) }
@@ -378,7 +389,7 @@ class ScoreViewActivity : AppCompatActivity() {
         val lockIn   = DataProcessor.interpolateAt(points, lockInT)
         val extended = FlySightCalc.extendLane(lockIn.lat, lockIn.lon, tgtLat, tgtLon, 8047.0)
         lanePolyline = Polyline().also { poly ->
-            poly.outlinePaint.color       = Color.parseColor("#5B8CCC")
+            poly.outlinePaint.color       = getColor(R.color.colorMapLane)
             poly.outlinePaint.strokeWidth = 3f
             poly.outlinePaint.pathEffect  = DashPathEffect(floatArrayOf(30f, 15f), 0f)
             poly.setPoints(listOf(
@@ -388,6 +399,43 @@ class ScoreViewActivity : AppCompatActivity() {
             ))
             map.overlays.add(poly)
         }
+
+        lockInMarker = makeMarker(map, GeoPoint(lockIn.lat, lockIn.lon), "Lane lock", colorLockIn)
+        map.overlays.add(lockInMarker)
+
+        // Parallel boundary lines at ±150 m and ±300 m from the lane centre
+        val latA    = Math.toRadians(lockIn.lat); val lonA = Math.toRadians(lockIn.lon)
+        val latB    = Math.toRadians(tgtLat);     val lonB = Math.toRadians(tgtLon)
+        val laneBrg = atan2(sin(lonB - lonA) * cos(latB),
+                            cos(latA) * sin(latB) - sin(latA) * cos(latB) * cos(lonB - lonA))
+
+        fun offsetLane(bearing: Double, distM: Double): List<GeoPoint> {
+            fun off(lat: Double, lon: Double) =
+                FlySightCalc.pointAtBearing(lat, lon, bearing, distM).let { GeoPoint(it.lat, it.lon) }
+            return listOf(
+                off(lockIn.lat,   lockIn.lon),
+                off(tgtLat,       tgtLon),
+                off(extended.lat, extended.lon)
+            )
+        }
+
+        fun parallelLine(bearing: Double, distM: Double, alpha: Int, width: Float, dashOn: Float, dashOff: Float): Polyline =
+            Polyline().also { poly ->
+                val base = getColor(R.color.colorMapLane)
+                poly.outlinePaint.color       = Color.argb(alpha, Color.red(base), Color.green(base), Color.blue(base))
+                poly.outlinePaint.strokeWidth = width
+                poly.outlinePaint.pathEffect  = DashPathEffect(floatArrayOf(dashOn, dashOff), 0f)
+                poly.setPoints(offsetLane(bearing, distM))
+                map.overlays.add(poly)
+            }
+
+        val perpRight = laneBrg + PI / 2
+        val perpLeft  = laneBrg - PI / 2
+        val half = FlySightCalc.LANE_WIDTH / 2
+        laneLeft150  = parallelLine(perpLeft,  half + 150.0, 160, 1.5f, 16f, 12f)
+        laneRight150 = parallelLine(perpRight, half + 150.0, 160, 1.5f, 16f, 12f)
+        laneLeft300  = parallelLine(perpLeft,  half + 300.0, 160, 1.0f, 10f, 14f)
+        laneRight300 = parallelLine(perpRight, half + 300.0, 160, 1.0f, 10f, 14f)
 
         // Labeled circle markers
         exitMarker = makeMarker(map, GeoPoint(exitPt.lat, exitPt.lon), "Exit", colorExit)

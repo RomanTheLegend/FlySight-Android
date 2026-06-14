@@ -9,6 +9,7 @@ object FlySightCalc {
     private const val A_GRAVITY      = 9.80665  // m/s²
     private const val SCORE_ALT_A_M  = 2500.0   // competition gate A, meters AGL
     private const val SCORE_ALT_B_M  = 1500.0   // competition gate B, meters AGL
+    const val LANE_WIDTH     = 600.0   // official width of designated lane
 
     data class TargetCoordinates(val lat: Double, val lon: Double)
 
@@ -145,30 +146,29 @@ object FlySightCalc {
      * Port of ExtendLane() from activelook_mode1.c.
      * Default extension is 5 km (FREEFALL_LOCK_TIME_MS lane definition).
      */
+    /** Destination-point formula: returns the coordinate reached by travelling
+     *  [distM] metres from ([lat],[lon]) along [bearingRad] (radians, clockwise from north). */
+    fun pointAtBearing(lat: Double, lon: Double, bearingRad: Double, distM: Double): TargetCoordinates {
+        val R    = 6371100.0
+        val dr   = distM / R
+        val lat1 = Math.toRadians(lat)
+        val lon1 = Math.toRadians(lon)
+        val lat2 = asin(sin(lat1) * cos(dr) + cos(lat1) * sin(dr) * cos(bearingRad))
+        val lon2 = lon1 + atan2(sin(bearingRad) * sin(dr) * cos(lat1), cos(dr) - sin(lat1) * sin(lat2))
+        return TargetCoordinates(Math.toDegrees(lat2), Math.toDegrees(lon2))
+    }
+
     fun extendLane(
         startLat: Double, startLon: Double,
         tgtLat:   Double, tgtLon:   Double,
         extDistM: Double = 5000.0
     ): TargetCoordinates {
-        val R    = 6371100.0
         val latA = Math.toRadians(startLat); val lonA = Math.toRadians(startLon)
         val latB = Math.toRadians(tgtLat);   val lonB = Math.toRadians(tgtLon)
-
-        // Spherical bearing from start → target
-        val dLon    = lonB - lonA
-        val y       = sin(dLon) * cos(latB)
-        val x       = cos(latA) * sin(latB) - sin(latA) * cos(latB) * cos(dLon)
-        val bearing = atan2(y, x)
-
-        // Destination-point formula: extend extDistM past target along same bearing
-        val dr   = extDistM / R
-        val latC = asin(sin(latB) * cos(dr) + cos(latB) * sin(dr) * cos(bearing))
-        val lonC = lonB + atan2(
-            sin(bearing) * sin(dr) * cos(latB),
-            cos(dr) - sin(latB) * sin(latC)
-        )
-
-        return TargetCoordinates(Math.toDegrees(latC), Math.toDegrees(lonC))
+        val dLon = lonB - lonA
+        val bearing = atan2(sin(dLon) * cos(latB),
+                            cos(latA) * sin(latB) - sin(latA) * cos(latB) * cos(dLon))
+        return pointAtBearing(tgtLat, tgtLon, bearing, extDistM)
     }
 
     /**
@@ -198,55 +198,35 @@ object FlySightCalc {
     /**
      * Returns the penalty percentage (0, 10, 20, or 50) for a lane violation.
      *
-     * Window for 10 % / 20 % tiers: t = 10.0 s after exit → 1500 m AGL crossing.
-     * Window for 50 % tier:          t = 10.0 s after exit → end of track
-     *                                 (proxy for parachute deployment).
+     * Window: from lane lock-in ([lockInT]) to the first point below 1500 m AGL,
+     * determined by direct AGL measurement on each DataPoint.
      *
      * Cross-track deviation is unsigned distance from the lane centreline.
-     *   < 150 m at any point inside the competition window → 10 %
-     *   150 – 300 m inside the competition window         → 20 %
-     *   > 300 m anywhere from 10 s to end of track        → 50 %
+     *   < 150 m throughout the window  → 10 %
+     *   150 – 300 m at any point       → 20 %
+     *   > 300 m at any point           → 50 %
      */
     fun penaltyPercent(
         points:     List<DataPoint>,
+        lockInT:    Double,
         lockInLat:  Double, lockInLon:  Double,
         laneExtLat: Double, laneExtLon: Double,
         dzElevM:    Double
     ): Int {
-        val tWindowEnd = gateAGLTime(points, dzElevM, 1500.0)
-
-        var maxDevWindow    = 0.0
-        var maxDevFullTrack = 0.0
-
+        var maxDev = 0.0
         for (p in points) {
-            if (p.t < 10.0) continue
-            val dev = Math.abs(crossTrackDeviationM(
+            if (p.t < lockInT) continue
+            if (p.hMSL - dzElevM < 1500.0) break
+            val dev = abs(crossTrackDeviationM(
                 lockInLat, lockInLon, laneExtLat, laneExtLon, p.lat, p.lon))
-            if (tWindowEnd == null || p.t <= tWindowEnd) {
-                if (dev > maxDevWindow) maxDevWindow = dev
-            }
-            if (dev > maxDevFullTrack) maxDevFullTrack = dev
+            if (dev > maxDev) maxDev = dev
         }
-
         return when {
-            maxDevFullTrack > 300.0  -> 50
-            maxDevWindow   >= 150.0  -> 20
-            maxDevWindow   > 0.0     -> 10
-            else                     -> 0
+            maxDev >  LANE_WIDTH/2 + 300.0 -> 50
+            maxDev >= LANE_WIDTH/2 + 150.0 -> 20
+            maxDev >  LANE_WIDTH/2         -> 10
+            else            -> 0
         }
-    }
-
-    /** Interpolated time (relative to exit) when hMSL descends through [gateAGL] AGL. */
-    private fun gateAGLTime(points: List<DataPoint>, dzElevM: Double, gateAGL: Double): Double? {
-        for (i in 1 until points.size) {
-            val p1 = points[i - 1]; val p2 = points[i]
-            if (p1.hMSL - dzElevM >= gateAGL && p2.hMSL - dzElevM < gateAGL) {
-                val span = p1.hMSL - p2.hMSL
-                val a    = if (span != 0.0) (p1.hMSL - (gateAGL + dzElevM)) / span else 0.0
-                return p1.t + a * (p2.t - p1.t)
-            }
-        }
-        return null
     }
 
     // ── Comparison ────────────────────────────────────────────────────────────

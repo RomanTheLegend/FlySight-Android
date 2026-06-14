@@ -43,6 +43,14 @@
     <color name="colorChartT2TotalSpeed">#7ADDA6</color>
     <color name="colorChartT2Elevation">#E8C460</color>
 
+    <!-- Score View map overlay colors -->
+    <color name="colorMapExit">#FFD600</color>
+    <color name="colorMapGate2500">#FF00AA</color>
+    <color name="colorMapGate1500">#00E5FF</color>
+    <color name="colorMapTarget">#B0B0B0</color>
+    <color name="colorMapTrack">#FF3333</color>
+    <color name="colorMapLane">#5B8CCC</color>
+
     <color name="white">#FFFFFF</color>
     <color name="black">#000000</color>
 </resources>
