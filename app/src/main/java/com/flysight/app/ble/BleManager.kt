@@ -366,9 +366,11 @@ class BleManager(private val context: Context) {
         onProgress: ((bytesReceived: Long, totalBytes: Long) -> Unit)? = null
     ): ByteArray {
         pingJob?.cancel()
+        gatt?.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
         return try {
             doRead(path, totalBytes, onProgress)
         } finally {
+            gatt?.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_BALANCED)
             if (gatt != null) startPing()
         }
     }
@@ -406,8 +408,8 @@ class BleManager(private val context: Context) {
                 val behind = (expected - counter) and 0xFF
                 when {
                     behind == 0 -> {
-                        // In-order: new packet
-                        rawWrite(byteArrayOf(FtOpcode.ACK_DATA, counter.toByte()), delayMs = 10)
+                        // In-order: new packet — ack immediately, no artificial delay
+                        rawWrite(byteArrayOf(FtOpcode.ACK_DATA, counter.toByte()), delayMs = 0)
                         if (data.isEmpty()) break  // EOF marker
                         buf.write(data)
                         received += data.size
@@ -435,9 +437,11 @@ class BleManager(private val context: Context) {
         onProgress: ((written: Long, total: Long) -> Unit)? = null
     ) {
         pingJob?.cancel()
+        gatt?.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
         try {
             doWrite(path, data, onProgress)
         } finally {
+            gatt?.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_BALANCED)
             if (gatt != null) startPing()
         }
     }
@@ -654,17 +658,22 @@ class BleManager(private val context: Context) {
         val char = ftPacketIn ?: error("Not connected")
         val g    = gatt        ?: error("Not connected")
         if (bleLogging) Log.d(TAG, "TX ${data.size}b: [${data.joinToString(" ") { "%02x".format(it) }}]")
-        val ok = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            g.writeCharacteristic(char, data, BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE) == BluetoothGatt.GATT_SUCCESS
-        } else {
-            @Suppress("DEPRECATION")
-            char.value = data
-            char.writeType = BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
-            @Suppress("DEPRECATION")
-            g.writeCharacteristic(char)
+        var backoff = 5L
+        for (attempt in 1..4) {
+            val ok = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                g.writeCharacteristic(char, data, BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE) == BluetoothGatt.GATT_SUCCESS
+            } else {
+                @Suppress("DEPRECATION")
+                char.value = data
+                char.writeType = BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
+                @Suppress("DEPRECATION")
+                g.writeCharacteristic(char)
+            }
+            if (ok) return true
+            if (bleLogging) Log.w(TAG, "TX FAILED (attempt $attempt): [${data.joinToString(" ") { "%02x".format(it) }}]")
+            if (attempt < 4) { delay(backoff); backoff = minOf(backoff * 2, 160L) }
         }
-        if (!ok && bleLogging) Log.w(TAG, "TX FAILED: [${data.joinToString(" ") { "%02x".format(it) }}]")
-        return ok
+        return false
     }
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
