@@ -77,7 +77,7 @@ object FlySightCalc {
                 val ptB    = interpolateCrossing(p1, p2, SCORE_ALT_B_M + dzElevM)
                 val time   = ptB.t - ptA.t
                 if (time <= 0.0) return null
-                val dist   = sqrt((ptB.x - ptA.x).pow(2) + (ptB.y - ptA.y).pow(2))
+                val dist   = haversineM(ptA.lat, ptA.lon, ptB.lat, ptB.lon)
                 return JumpScore(time, dist, dist / time * 3.6)
             }
         }
