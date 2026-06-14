@@ -90,7 +90,7 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, FileBrowserActivity::class.java))
         }
         binding.btnScoreTrack.setOnClickListener {
-            Toast.makeText(this, "Score track — coming soon", Toast.LENGTH_SHORT).show()
+            startActivity(Intent(this, ScoreViewActivity::class.java))
         }
         binding.btnCompareTracks.setOnClickListener {
             Toast.makeText(this, "Compare tracks — coming soon", Toast.LENGTH_SHORT).show()

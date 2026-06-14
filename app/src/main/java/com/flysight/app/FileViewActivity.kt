@@ -26,9 +26,10 @@ import kotlinx.coroutines.launch
 class FileViewActivity : AppCompatActivity() {
 
     companion object {
-        const val EXTRA_NAME = "file_name"
-        const val EXTRA_PATH = "file_path"
-        const val EXTRA_SIZE = "file_size"
+        const val EXTRA_NAME       = "file_name"
+        const val EXTRA_PATH       = "file_path"
+        const val EXTRA_SIZE       = "file_size"
+        const val EXTRA_FROM_CACHE = "from_cache"
     }
 
     private lateinit var binding: ActivityFileViewBinding
@@ -61,9 +62,14 @@ class FileViewActivity : AppCompatActivity() {
             viewModel.loadState.collectLatest { state ->
                 when (state) {
                     is LoadState.Idle -> {
-                        initProgressBar(totalSize)
-                        setStatus("Downloading $name…")
-                        viewModel.load(path, totalSize, (application as FlySightApp).bleManager)
+                        val cached = TrackCache.points
+                        if (intent.getBooleanExtra(EXTRA_FROM_CACHE, false) && cached != null) {
+                            viewModel.loadFromCache(cached)
+                        } else {
+                            initProgressBar(totalSize)
+                            setStatus("Downloading $name…")
+                            viewModel.load(path, totalSize, (application as FlySightApp).bleManager)
+                        }
                     }
                     is LoadState.Loading -> {
                         if (state.total > 0) {
@@ -89,7 +95,7 @@ class FileViewActivity : AppCompatActivity() {
 
     // ── Chart ──────────────────────────────────────────────────────────────
 
-    private fun showChart(points: List<TrackPoint>) {
+    private fun showChart(points: List<DataPoint>) {
         val elevE = ArrayList<Entry>(points.size)
         val hSpdE = ArrayList<Entry>(points.size)
         val vSpdE = ArrayList<Entry>(points.size)
@@ -97,7 +103,7 @@ class FileViewActivity : AppCompatActivity() {
         val grE   = ArrayList<Entry>(points.size)
 
         for (p in points) {
-            val t = p.timeSec.toFloat()
+            val t = p.t.toFloat()
             elevE.add(Entry(t, p.hMSL.toFloat()))
             hSpdE.add(Entry(t, p.hSpeed.toFloat()))
             vSpdE.add(Entry(t, p.vSpeed.toFloat()))
@@ -246,9 +252,9 @@ class FileViewActivity : AppCompatActivity() {
         toggleSeries(binding.colGR,     binding.tvGRValue,     binding.tvGRUnit,     3)
     }
 
-    private fun updateValuesAt(timeSec: Float, points: List<TrackPoint>) {
+    private fun updateValuesAt(timeSec: Float, points: List<DataPoint>) {
         if (points.isEmpty()) return
-        val idx = points.indexOfFirst { it.timeSec >= timeSec }
+        val idx = points.indexOfFirst { it.t >= timeSec }
             .let { if (it < 0) points.size - 1 else it }
             .coerceIn(0, points.size - 1)
         val p = points[idx]

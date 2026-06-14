@@ -56,5 +56,9 @@
             android:name=".MapPickerActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".ScoreViewActivity"
+            android:exported="false" />
+
     </application>
 </manifest>
