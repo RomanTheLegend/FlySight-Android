@@ -200,6 +200,10 @@ class BleManager(private val context: Context) {
 
     /** Call from Activity.onResume() to pick up newly bonded devices. */
     fun refreshBondedDevices() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            context.checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
+                != android.content.pm.PackageManager.PERMISSION_GRANTED) return
+
         val bonded = btAdapter?.bondedDevices
             ?.filter { it.name?.startsWith("FlySight") == true }
             ?: emptySet()
