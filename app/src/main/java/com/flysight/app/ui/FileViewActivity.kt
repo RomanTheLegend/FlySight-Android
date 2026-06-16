@@ -11,6 +11,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.flysight.app.FlySightApp
 import com.flysight.app.R
+import com.flysight.app.calc.FlySightCalc
 import com.flysight.app.data.DataPoint
 import com.flysight.app.data.TrackCache
 import com.flysight.app.databinding.ActivityFileViewBinding
@@ -40,6 +41,10 @@ class FileViewActivity : AppCompatActivity() {
     private lateinit var binding: ActivityFileViewBinding
     private val viewModel: FileViewViewModel by viewModels()
 
+    private var allPoints: List<DataPoint> = emptyList()
+    private var exitIndex: Int = -1
+    private var hideAirplane = true
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityFileViewBinding.inflate(layoutInflater)
@@ -61,6 +66,12 @@ class FileViewActivity : AppCompatActivity() {
         binding.btnDisconnect.setOnClickListener {
             (application as FlySightApp).bleManager.disconnect()
             finish()
+        }
+        binding.btnAirplane.setOnClickListener {
+            if (allPoints.isEmpty()) return@setOnClickListener
+            hideAirplane = !hideAirplane
+            updateAirplaneButton()
+            renderChart(effectivePoints())
         }
 
         lifecycleScope.launch {
@@ -105,7 +116,30 @@ class FileViewActivity : AppCompatActivity() {
 
     // ── Chart ──────────────────────────────────────────────────────────────
 
+    private fun updateAirplaneButton() {
+        if (hideAirplane) {
+            binding.imgAirplane.setImageResource(R.drawable.ic_airplane_show)
+            binding.tvAirplaneLabel.text = "Show"
+        } else {
+            binding.imgAirplane.setImageResource(R.drawable.ic_airplane_hide)
+            binding.tvAirplaneLabel.text = "Hide"
+        }
+    }
+
+    private fun effectivePoints(): List<DataPoint> {
+        if (!hideAirplane || exitIndex < 0) return allPoints
+        return allPoints.subList(exitIndex, allPoints.size)
+    }
+
     private fun showChart(points: List<DataPoint>) {
+        allPoints = points
+        exitIndex = FlySightCalc.detectExit(points)
+        renderChart(effectivePoints())
+    }
+
+    private fun renderChart(points: List<DataPoint>) {
+        if (points.isEmpty()) return
+        binding.lineChart.resetZoom()
         val elevE = ArrayList<Entry>(points.size)
         val hSpdE = ArrayList<Entry>(points.size)
         val vSpdE = ArrayList<Entry>(points.size)
@@ -231,6 +265,7 @@ class FileViewActivity : AppCompatActivity() {
         binding.loadingPanel.visibility = View.GONE
         binding.chartCard.visibility    = View.VISIBLE
         binding.valuesPanel.visibility  = View.VISIBLE
+        binding.btnAirplane.visibility  = View.VISIBLE
 
         updateValuesAt(0f, points)
 
@@ -282,5 +317,6 @@ class FileViewActivity : AppCompatActivity() {
         binding.loadingPanel.visibility = View.VISIBLE
         binding.chartCard.visibility    = View.GONE
         binding.valuesPanel.visibility  = View.GONE
+        binding.btnAirplane.visibility  = View.GONE
     }
 }

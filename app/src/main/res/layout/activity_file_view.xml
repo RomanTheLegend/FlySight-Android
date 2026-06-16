@@ -51,6 +51,42 @@
 
         </LinearLayout>
 
+        <LinearLayout
+            android:id="@+id/btnAirplane"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="@drawable/bg_btn_action"
+            android:paddingStart="8dp"
+            android:paddingEnd="10dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
+            android:layout_marginEnd="8dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/imgAirplane"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:src="@drawable/ic_airplane_show"
+                android:scaleType="fitCenter"
+                android:layout_marginEnd="6dp" />
+
+            <TextView
+                android:id="@+id/tvAirplaneLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minWidth="32dp"
+                android:text="Show"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="@color/colorTextPrimary" />
+
+        </LinearLayout>
+
         <ImageView
             android:id="@+id/btnDisconnect"
             android:layout_width="44dp"
