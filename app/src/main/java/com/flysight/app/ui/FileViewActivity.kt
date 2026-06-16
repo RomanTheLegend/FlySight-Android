@@ -16,7 +16,6 @@ import com.flysight.app.data.TrackCache
 import com.flysight.app.databinding.ActivityFileViewBinding
 import com.flysight.app.viewmodel.FileViewViewModel
 import com.flysight.app.viewmodel.LoadState
-import com.github.mikephil.charting.components.Legend
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.components.YAxis
 import com.github.mikephil.charting.data.Entry
@@ -77,7 +76,11 @@ class FileViewActivity : AppCompatActivity() {
                             viewModel.load(path, totalSize, (application as FlySightApp).bleManager)
                         }
                     }
-                    is LoadState.Parsing -> setStatus("Analyzing…")
+                    is LoadState.Parsing -> {
+                        binding.progressBar.isIndeterminate = true
+                        binding.tvProgressBytes.visibility = View.GONE
+                        setStatus("Analyzing…")
+                    }
                     is LoadState.Loading -> {
                         if (state.total > 0) {
                             binding.progressBar.isIndeterminate = false
@@ -184,16 +187,7 @@ class FileViewActivity : AppCompatActivity() {
             axisLineColor = colorElev
         }
 
-        chart.legend.apply {
-            isEnabled = true
-            verticalAlignment = Legend.LegendVerticalAlignment.TOP
-            horizontalAlignment = Legend.LegendHorizontalAlignment.LEFT
-            orientation = Legend.LegendOrientation.HORIZONTAL
-            setDrawInside(false)
-            yOffset = 8f
-            textSize = 11f
-            textColor = axisTextColor
-        }
+        chart.legend.isEnabled = false
 
         chart.description.isEnabled = false
         chart.setTouchEnabled(true)
