@@ -20,7 +20,9 @@ sealed class SettingItem {
         val key: String,
         val label: String,
         var enabled: Boolean,
-        val hint: String? = null
+        val hint: String? = null,
+        val isAdvanced: Boolean = false,
+        val advancedDefault: String? = null
     ) : SettingItem() {
         override val viewType = VIEW_TOGGLE
     }
@@ -31,7 +33,9 @@ sealed class SettingItem {
         val options: List<String>,
         val values: List<String>,
         var selectedIndex: Int,
-        val hint: String? = null
+        val hint: String? = null,
+        val isAdvanced: Boolean = false,
+        val advancedDefault: String? = null
     ) : SettingItem() {
         override val viewType = VIEW_CHOICE
     }
@@ -42,7 +46,9 @@ sealed class SettingItem {
         var value: String,
         val unit: String = "",
         val isDecimal: Boolean = false,
-        val hint: String? = null
+        val hint: String? = null,
+        val isAdvanced: Boolean = false,
+        val advancedDefault: String? = null
     ) : SettingItem() {
         override val viewType = VIEW_NUMBER
     }
@@ -53,7 +59,9 @@ sealed class SettingItem {
         val min: Int,
         val max: Int,
         var value: Int,
-        val hint: String? = null
+        val hint: String? = null,
+        val isAdvanced: Boolean = false,
+        val advancedDefault: String? = null
     ) : SettingItem() {
         override val viewType = VIEW_SLIDER
     }

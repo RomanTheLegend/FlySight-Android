@@ -15,26 +15,32 @@ object ConfigSerializer {
                     sb.append("; ==== ${item.title} ====\n")
                 }
                 is SettingItem.Toggle -> {
-                    item.hint?.let { sb.append("; $it\n") }
-                    sb.append("${item.key}: ${if (item.enabled) "1" else "0"}\n")
+                    val v = if (item.enabled) "1" else "0"
                     knownKeys.add(item.key)
+                    if (item.isAdvanced && v == item.advancedDefault) continue
+                    item.hint?.let { sb.append("; $it\n") }
+                    sb.append("${item.key}: $v\n")
                 }
                 is SettingItem.Choice -> {
-                    item.hint?.let { sb.append("; $it\n") }
-                    sb.append("${item.key}: ${item.values[item.selectedIndex]}\n")
+                    val v = item.values[item.selectedIndex]
                     knownKeys.add(item.key)
+                    if (item.isAdvanced && v == item.advancedDefault) continue
+                    item.hint?.let { sb.append("; $it\n") }
+                    sb.append("${item.key}: $v\n")
                 }
                 is SettingItem.NumberInput -> {
-                    if (item.value.isNotBlank()) {
-                        item.hint?.let { sb.append("; $it\n") }
-                        sb.append("${item.key}: ${item.value}\n")
-                        knownKeys.add(item.key)
-                    }
-                }
-                is SettingItem.Slider -> {
+                    knownKeys.add(item.key)
+                    if (item.value.isBlank()) continue
+                    if (item.isAdvanced && item.value == item.advancedDefault) continue
                     item.hint?.let { sb.append("; $it\n") }
                     sb.append("${item.key}: ${item.value}\n")
+                }
+                is SettingItem.Slider -> {
+                    val v = item.value.toString()
                     knownKeys.add(item.key)
+                    if (item.isAdvanced && v == item.advancedDefault) continue
+                    item.hint?.let { sb.append("; $it\n") }
+                    sb.append("${item.key}: $v\n")
                 }
                 is SettingItem.CoordPicker -> {
                     item.hint?.let { sb.append("; $it\n") }

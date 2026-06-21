@@ -13,10 +13,13 @@ import com.flysight.app.FlySightApp
 import com.flysight.app.ble.BleManager
 import com.flysight.app.ble.BleState
 import com.flysight.app.ble.CONFIG_PATH
+import com.flysight.app.ble.CONFIG_MD5_PATH
+import com.flysight.app.ble.WRITE_CONFIG_PATH
 import com.flysight.app.databinding.ActivityConfigBinding
 import com.flysight.app.ui.MapPickerActivity
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import java.security.MessageDigest
 
 class ConfigActivity : AppCompatActivity() {
 
@@ -40,6 +43,7 @@ class ConfigActivity : AppCompatActivity() {
         binding.btnHeaderBack.setOnClickListener { finish() }
         binding.recyclerSettings.layoutManager = LinearLayoutManager(this)
         binding.btnSave.setOnClickListener { saveConfig() }
+        binding.btnReload.setOnClickListener { reloadFromDevice() }
 
         mapPickerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == RESULT_OK) {
@@ -79,6 +83,42 @@ class ConfigActivity : AppCompatActivity() {
             }
         }
 
+        val app = application as FlySightApp
+        if (app.cachedConfigValues != null) {
+            restoreFromCache(app)
+        } else {
+            readConfig()
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        if (settingsItems.isNotEmpty()) {
+            val app = application as FlySightApp
+            app.cachedConfigText   = originalText
+            app.cachedConfigValues = extractCurrentValues()
+        }
+    }
+
+    private fun restoreFromCache(app: FlySightApp) {
+        originalText  = app.cachedConfigText
+        val settings  = app.cachedConfigValues ?: return
+        settingsItems = buildItems(settings)
+        settingsAdapter = SettingsAdapter(settingsItems)
+        binding.recyclerSettings.adapter = settingsAdapter
+        binding.recyclerSettings.visibility = View.VISIBLE
+        binding.tvEmpty.visibility = View.GONE
+        val label = if (originalText.isBlank()) "defaults" else "${settingsItems.count { it !is SettingItem.Section }} settings"
+        setStatus("$label loaded")
+        setLoading(false)
+    }
+
+    private fun reloadFromDevice() {
+        val app = application as FlySightApp
+        app.cachedConfigValues = null
+        app.cachedConfigText   = ""
+        settingsItems  = emptyList()
+        settingsAdapter = null
         readConfig()
     }
 
@@ -102,8 +142,12 @@ class ConfigActivity : AppCompatActivity() {
                 binding.tvEmpty.visibility = View.GONE
                 val label = if (originalText.isBlank()) "defaults" else "${settingsItems.count { it !is SettingItem.Section }} settings"
                 setStatus("$label loaded")
+
+                val app = application as FlySightApp
+                app.cachedConfigText   = originalText
+                app.cachedConfigValues = settings
             } catch (e: java.io.FileNotFoundException) {
-                originalText = ""
+                originalText  = ""
                 settingsItems = buildItems(emptyMap())
                 settingsAdapter = SettingsAdapter(settingsItems)
                 binding.recyclerSettings.adapter = settingsAdapter
@@ -128,16 +172,25 @@ class ConfigActivity : AppCompatActivity() {
             try {
                 val newText = ConfigSerializer.serialize(settingsItems, originalText)
                 val bytes   = newText.toByteArray(Charsets.UTF_8)
-                setLoading(true, "Writing $CONFIG_PATH…")
+                setLoading(true, "Writing $WRITE_CONFIG_PATH…")
                 binding.progressBar.isIndeterminate = false
                 binding.progressBar.max = bytes.size
                 binding.progressBar.progress = 0
-                ble.writeFile(CONFIG_PATH, bytes) { written, total ->
+                ble.writeFile(WRITE_CONFIG_PATH, bytes) { written, total ->
                     binding.progressBar.progress = written.toInt()
                     binding.tvProgressBytes.text = "${written / 1024} KB / ${total / 1024} KB"
                     binding.tvProgressBytes.visibility = View.VISIBLE
                 }
+
+                val md5Hex = MessageDigest.getInstance("MD5").digest(bytes)
+                    .joinToString("") { "%02x".format(it) }
+                ble.writeFile(CONFIG_MD5_PATH, (md5Hex + "\n").toByteArray(Charsets.UTF_8))
+
                 originalText = newText
+                val app = application as FlySightApp
+                app.cachedConfigText   = originalText
+                app.cachedConfigValues = extractCurrentValues()
+
                 setStatus("Saved ${bytes.size} bytes  ✓")
                 Toast.makeText(this@ConfigActivity, "Config saved!", Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
@@ -147,6 +200,24 @@ class ConfigActivity : AppCompatActivity() {
                 setLoading(false)
             }
         }
+    }
+
+    private fun extractCurrentValues(): Map<String, String> {
+        val map = mutableMapOf<String, String>()
+        for (item in settingsItems) {
+            when (item) {
+                is SettingItem.Toggle      -> map[item.key] = if (item.enabled) "1" else "0"
+                is SettingItem.Choice      -> map[item.key] = item.values[item.selectedIndex]
+                is SettingItem.NumberInput -> if (item.value.isNotBlank()) map[item.key] = item.value
+                is SettingItem.Slider      -> map[item.key] = item.value.toString()
+                is SettingItem.CoordPicker -> {
+                    if (item.latRaw.isNotBlank()) map[item.latKey] = item.latRaw
+                    if (item.lonRaw.isNotBlank()) map[item.lonKey] = item.lonRaw
+                }
+                is SettingItem.Section -> {}
+            }
+        }
+        return map
     }
 
     private fun openMap() {
@@ -180,8 +251,10 @@ class ConfigActivity : AppCompatActivity() {
             binding.tvProgressBytes.visibility = View.GONE
         }
         val saveEnabled = !loading && settingsItems.isNotEmpty()
-        binding.btnSave.isEnabled = saveEnabled
-        binding.btnSave.alpha = if (saveEnabled) 1f else 0.4f
+        binding.btnSave.isEnabled   = saveEnabled
+        binding.btnSave.alpha       = if (saveEnabled) 1f else 0.4f
+        binding.btnReload.isEnabled = !loading
+        binding.btnReload.alpha     = if (!loading) 1f else 0.4f
     }
 
     private fun setStatus(text: String) { binding.tvStatus.text = text }
@@ -198,6 +271,15 @@ class ConfigActivity : AppCompatActivity() {
         fun slider(key: String, label: String, min: Int, max: Int, def: Int = 0, hint: String? = null) =
             SettingItem.Slider(key, label, min, max,
                 (s[key]?.toIntOrNull() ?: def).coerceIn(min, max), hint = hint)
+
+        // Advanced helpers — items only written to config when changed from firmware defaults
+        fun advancedToggle(key: String, label: String, firmwareDefault: Int, hint: String? = null) =
+            SettingItem.Toggle(key, label, (s[key]?.toIntOrNull() ?: firmwareDefault) != 0,
+                hint = hint, isAdvanced = true, advancedDefault = firmwareDefault.toString())
+        fun advancedSlider(key: String, label: String, min: Int, max: Int, firmwareDefault: Int, hint: String? = null) =
+            SettingItem.Slider(key, label, min, max,
+                (s[key]?.toIntOrNull() ?: firmwareDefault).coerceIn(min, max),
+                hint = hint, isAdvanced = true, advancedDefault = firmwareDefault.toString())
 
         val gpsModelOpts = listOf("Portable", "Stationary", "Pedestrian", "Automotive",
                                    "Sea", "Airborne <1G", "Airborne <2G", "Airborne <4G")
@@ -217,6 +299,12 @@ class ConfigActivity : AppCompatActivity() {
         val spModeOpts = modeOpts + listOf("Altitude above DZ")
         val spModeVals = modeVals + listOf("12")
 
+        val alLineOpts = listOf("Horizontal Speed", "Vertical Speed", "Glide Ratio",
+                                 "Inverse Glide Ratio", "Total Speed",
+                                 "Direction to Dest.", "Distance to Dest.",
+                                 "Direction to Bearing", "Dive Angle", "Altitude above DZ", "Course")
+        val alLineVals = listOf("0", "1", "2", "3", "4", "5", "6", "7", "11", "12", "13")
+
         val dzCoord = SettingItem.CoordPicker(
             "Lat", "Lon", "DZ Coordinates",
             s["Lat"] ?: "0", s["Lon"] ?: "0",
@@ -233,6 +321,8 @@ class ConfigActivity : AppCompatActivity() {
         return buildList {
             // ── Navigation ───────────────────────────────────────────────────
             add(SettingItem.Section("Navigation").also { it.isExpanded = true })
+            add(num("Device_ID", "Device ID", def = "",
+                hint = "Unique device ID required to activate navigation features. Find it on the FlySight hardware label."))
             add(dzCoord)
             add(num("DZ_Elev",   "Dropzone Elevation",  "m",  "0",
                 hint = "Ground elevation of the dropzone in meters. All alarm and AGL elevations are measured relative to this value."))
@@ -318,6 +408,8 @@ class ConfigActivity : AppCompatActivity() {
                 listOf("Do Nothing", "Test Speech Mode", "Play File"),
                 listOf("0", "1", "2"),
                 hint = "What FlySight does immediately after powering on: nothing, a speech test of all digits, or play a specific audio file."))
+            add(num("Init_File", "Init File", def = "0",
+                hint = "Index of the audio file to play on power-on when 'Play File' mode is selected."))
 
             // ── Altitude Alarms ──────────────────────────────────────────────
             add(SettingItem.Section("Altitude Alarms"))
@@ -325,6 +417,14 @@ class ConfigActivity : AppCompatActivity() {
                 hint = "Meters above an alarm elevation during which background tones and speech are silenced. Helps make the alarm audibly distinct (~50 m is typical for wingsuiting)."))
             add(num("Win_Below", "Window Below", "m", "0",
                 hint = "Meters below an alarm elevation during which background tones and speech are silenced."))
+            add(num("Alarm_Elev", "Alarm Elevation", "m", "0",
+                hint = "Altitude AGL (meters) at which the alarm triggers."))
+            add(choice("Alarm_Type", "Alarm Type",
+                listOf("No Alarm", "Beep", "Chirp Up", "Chirp Down", "Play File"),
+                listOf("0", "1", "2", "3", "4"),
+                hint = "Action taken when the alarm elevation is reached."))
+            add(num("Alarm_File", "Alarm File", def = "0",
+                hint = "Index of the audio file to play when Alarm Type is 'Play File'."))
 
             // ── Altitude Mode ────────────────────────────────────────────────
             add(SettingItem.Section("Altitude Mode"))
@@ -334,37 +434,55 @@ class ConfigActivity : AppCompatActivity() {
             add(num("Alt_Step", "Step", "", "0",
                 hint = "Altitude callout step size. E.g. 500 ft → 'nine thousand five hundred'. Use 1 for exact altitude. Not called out below 1500 m AGL."))
 
-            // ── Enable Modules ───────────────────────────────────────────────
-            add(SettingItem.Section("Enable Modules"))
-            add(toggle("Enable_Audio",   "Audio Output"))
-            add(toggle("Enable_Logging", "Data Logging"))
-            add(toggle("Enable_Vbat",    "Battery Voltage"))
-            add(toggle("Enable_Mic",     "Microphone"))
-            add(toggle("Enable_Imu",     "IMU (Accel/Gyro)"))
-            add(toggle("Enable_Gnss",    "GNSS"))
-            add(toggle("Enable_Baro",    "Barometer"))
-            add(toggle("Enable_Hum",     "Humidity Sensor"))
-            add(toggle("Enable_Mag",     "Magnetometer"))
-            add(toggle("Enable_Raw",     "Raw Sensor Data"))
-            add(toggle("Cold_Start",     "Cold Start"))
-            add(slider("Ble_Tx_Power", "BLE TX Power", 0, 31, 25))
+            // ── Silence Windows ──────────────────────────────────────────────
+            add(SettingItem.Section("Silence Windows"))
+            add(num("Win_Top",    "Window Top",    "m", "0",
+                hint = "Upper altitude AGL (meters) of the silence window. Background tones are muted inside this window; only alarms play."))
+            add(num("Win_Bottom", "Window Bottom", "m", "0",
+                hint = "Lower altitude AGL (meters) of the silence window."))
 
-            // ── Sensor Settings ──────────────────────────────────────────────
-            add(SettingItem.Section("Sensor Settings"))
-            add(slider("Baro_ODR",  "Barometer ODR",      0, 7,  2))
-            add(slider("Hum_ODR",   "Humidity ODR",       0, 3,  1))
-            add(slider("Mag_ODR",   "Magnetometer ODR",   0, 3,  0))
-            add(slider("Accel_ODR", "Accelerometer ODR",  0, 11, 1))
-            add(slider("Accel_FS",  "Accelerometer FS",   0, 3,  1))
-            add(slider("Gyro_ODR",  "Gyroscope ODR",      0, 10, 1))
-            add(slider("Gyro_FS",   "Gyroscope FS",       0, 3,  3))
+            // ── Enable Modules (Advanced) ────────────────────────────────────
+            // Enable_Vbat is in CONFIG.TXT → standard (always written)
+            // All others are not in the default config → only written when changed
+            add(SettingItem.Section("Enable Modules (Advanced)"))
+            add(advancedToggle("Enable_Audio",   "Audio Output",       1))
+            add(advancedToggle("Enable_Logging", "Data Logging",       1))
+            add(toggle("Enable_Vbat",            "Battery Voltage"))
+            add(advancedToggle("Enable_Mic",     "Microphone",         1))
+            add(advancedToggle("Enable_Imu",     "IMU (Accel/Gyro)",   1))
+            add(advancedToggle("Enable_Gnss",    "GNSS",               1))
+            add(advancedToggle("Enable_Baro",    "Barometer",          1))
+            add(advancedToggle("Enable_Hum",     "Humidity Sensor",    1))
+            add(advancedToggle("Enable_Mag",     "Magnetometer",       1))
+            add(advancedToggle("Enable_Raw",     "Raw Sensor Data",    1))
+            add(advancedToggle("Cold_Start",     "Cold Start",         0))
+            add(advancedSlider("Ble_Tx_Power",   "BLE TX Power", 0, 31, 25))
+
+            // ── Sensor Settings (Advanced) ───────────────────────────────────
+            add(SettingItem.Section("Sensor Settings (Advanced)"))
+            add(advancedSlider("Baro_ODR",  "Barometer ODR",      0, 7,  2))
+            add(advancedSlider("Hum_ODR",   "Humidity ODR",       0, 3,  1))
+            add(advancedSlider("Mag_ODR",   "Magnetometer ODR",   0, 3,  0))
+            add(advancedSlider("Accel_ODR", "Accelerometer ODR",  0, 11, 1))
+            add(advancedSlider("Accel_FS",  "Accelerometer FS",   0, 3,  1))
+            add(advancedSlider("Gyro_ODR",  "Gyroscope ODR",      0, 10, 1))
+            add(advancedSlider("Gyro_FS",   "Gyroscope FS",       0, 3,  3))
 
             // ── ActiveLook ───────────────────────────────────────────────────
             add(SettingItem.Section("ActiveLook"))
+            add(num("AL_ID", "Device ID", def = "0",
+                hint = "Bluetooth device ID of the ActiveLook glasses to pair with."))
             add(choice("AL_Mode", "Mode",
-                listOf("Not Active", "Default Mode"),
-                listOf("0", "1")))
+                listOf("Not Active", "Default Mode", "Competition Mode"),
+                listOf("0", "1", "2")))
             add(num("AL_Rate", "Rate", "ms", "1000"))
+            add(choice("AL_Line", "Line Value", alLineOpts, alLineVals,
+                hint = "Which measurement to display on the ActiveLook line."))
+            add(choice("AL_Units", "Units",
+                listOf("km/h or m", "mph or feet"), listOf("0", "1"),
+                hint = "Units for the ActiveLook display."))
+            add(slider("AL_Dec", "Decimal Places", 0, 2, 1,
+                hint = "Decimal places shown in the ActiveLook value."))
         }
     }
 }

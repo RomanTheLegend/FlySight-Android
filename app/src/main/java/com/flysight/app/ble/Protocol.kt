@@ -28,7 +28,9 @@ object FtOpcode {
 // Manufacturer ID 0x09DB = Bionic Avionics Inc.
 const val MANUF_ID_FLYSIGHT = 0x09DB
 
-const val CONFIG_PATH = "demo_cfg.txt"
+const val CONFIG_PATH       = "config.txt"
+const val WRITE_CONFIG_PATH = "_CONFIG.TXT"
+const val CONFIG_MD5_PATH   = "_CONFIG.MD5"
 
 // Sentinel RSSI used for bonded devices not currently advertising
 const val RSSI_UNKNOWN = Int.MIN_VALUE
