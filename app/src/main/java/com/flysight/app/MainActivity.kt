@@ -7,12 +7,17 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.text.InputType
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
+import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
@@ -74,7 +79,7 @@ class MainActivity : AppCompatActivity() {
             ble.connect(device.device)
         }
 
-        adapterPaired = DeviceAdapter(connectDevice)
+        adapterPaired = DeviceAdapter(connectDevice, onLongClick = { showDeviceMenu(it) })
         binding.recyclerPaired.layoutManager = LinearLayoutManager(this)
         binding.recyclerPaired.addItemDecoration(
             DividerItemDecoration(this, DividerItemDecoration.VERTICAL)
@@ -237,6 +242,51 @@ class MainActivity : AppCompatActivity() {
         if (missing.isNotEmpty()) permissionOnlyLauncher.launch(missing.toTypedArray())
     }
 
+    private fun showDeviceMenu(device: ScannedDevice) {
+        AlertDialog.Builder(this)
+            .setTitle(device.name)
+            .setItems(arrayOf("Rename device", "Unpair")) { _, which ->
+                when (which) {
+                    0 -> showRenameDialog(device)
+                    1 -> showUnpairConfirm(device)
+                }
+            }
+            .show()
+    }
+
+    private fun showRenameDialog(device: ScannedDevice) {
+        val px = (20 * resources.displayMetrics.density).toInt()
+        val input = EditText(this).apply {
+            setText(device.name)
+            selectAll()
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS
+        }
+        val container = FrameLayout(this).apply {
+            setPadding(px, 0, px, 0)
+            addView(input)
+        }
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Rename device")
+            .setView(container)
+            .setPositiveButton("Rename") { _, _ ->
+                val name = input.text.toString().trim()
+                if (name.isNotEmpty()) ble.renameDevice(device.device, name)
+            }
+            .setNegativeButton("Cancel", null)
+            .create()
+        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
+        dialog.show()
+    }
+
+    private fun showUnpairConfirm(device: ScannedDevice) {
+        AlertDialog.Builder(this)
+            .setTitle("Unpair ${device.name}?")
+            .setMessage("This device will be removed from your paired devices.")
+            .setPositiveButton("Unpair") { _, _ -> ble.unpairDevice(device.device) }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
     private fun checkPermissionsAndScan() {
         val btAdapter = (getSystemService(BLUETOOTH_SERVICE) as BluetoothManager).adapter
         if (btAdapter == null || !btAdapter.isEnabled) {
@@ -257,7 +307,8 @@ class MainActivity : AppCompatActivity() {
 }
 
 class DeviceAdapter(
-    private val onClick: (ScannedDevice) -> Unit
+    private val onClick: (ScannedDevice) -> Unit,
+    private val onLongClick: ((ScannedDevice) -> Unit)? = null
 ) : RecyclerView.Adapter<DeviceAdapter.VH>() {
 
     private var items = listOf<ScannedDevice>()
@@ -297,5 +348,8 @@ class DeviceAdapter(
         )
 
         holder.itemView.setOnClickListener { onClick(item) }
+        if (onLongClick != null) {
+            holder.itemView.setOnLongClickListener { onLongClick.invoke(item); true }
+        }
     }
 }

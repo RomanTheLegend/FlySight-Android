@@ -25,3 +25,7 @@ captures/
 # OS
 .DS_Store
 Thumbs.db
+design_reference/
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+flysight_md_release/

@@ -53,6 +53,16 @@ object ConfigSerializer {
                         knownKeys.add(item.lonKey)
                     }
                 }
+                is SettingItem.AlLineList -> {
+                    knownKeys.add("AL_Line")
+                    knownKeys.add("AL_Units")
+                    knownKeys.add("AL_Dec")
+                    for (alLine in item.lines) {
+                        sb.append("AL_Line: ${alLine.mode}\n")
+                        sb.append("AL_Units: ${alLine.units}\n")
+                        sb.append("AL_Dec: ${alLine.dec}\n")
+                    }
+                }
             }
         }
 

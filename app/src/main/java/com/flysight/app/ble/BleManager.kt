@@ -198,6 +198,27 @@ class BleManager(private val context: Context) {
         leScanner = null
     }
 
+    // ── Device management ─────────────────────────────────────────────────────
+
+    private val namePref get() =
+        context.getSharedPreferences("device_names", android.content.Context.MODE_PRIVATE)
+
+    fun renameDevice(device: BluetoothDevice, name: String) {
+        val trimmed = name.trim().ifEmpty { return }
+        namePref.edit().putString(device.address, trimmed).apply()
+        refreshBondedDevices()
+    }
+
+    @SuppressLint("MissingPermission")
+    fun unpairDevice(device: BluetoothDevice) {
+        try { device.javaClass.getMethod("removeBond").invoke(device) } catch (_: Exception) {}
+        bondedAddresses = bondedAddresses - device.address
+        _scanned.value  = _scanned.value.filter { it.device.address != device.address }
+    }
+
+    private fun deviceName(device: BluetoothDevice): String =
+        namePref.getString(device.address, null) ?: device.displayName()
+
     /** Call from Activity.onResume() to pick up newly bonded devices. */
     fun refreshBondedDevices() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
@@ -211,8 +232,8 @@ class BleManager(private val context: Context) {
 
         val current = _scanned.value.toMutableList()
         for (dev in bonded) {
-            val idx = current.indexOfFirst { it.device.address == dev.address }
-            val entry = ScannedDevice(dev, dev.displayName(), RSSI_UNKNOWN, false, isPaired = true)
+            val idx   = current.indexOfFirst { it.device.address == dev.address }
+            val entry = ScannedDevice(dev, deviceName(dev), RSSI_UNKNOWN, false, isPaired = true)
             if (idx >= 0) current[idx] = entry else current.add(0, entry)
         }
         _scanned.value = current
@@ -221,7 +242,7 @@ class BleManager(private val context: Context) {
     private fun bondedDeviceEntries(): List<ScannedDevice> =
         btAdapter?.bondedDevices
             ?.filter { it.address in bondedAddresses }
-            ?.map { ScannedDevice(it, it.displayName(), RSSI_UNKNOWN, false, isPaired = true) }
+            ?.map { ScannedDevice(it, deviceName(it), RSSI_UNKNOWN, false, isPaired = true) }
             ?: emptyList()
 
     private val scanCb = object : ScanCallback() {
@@ -693,6 +714,10 @@ class BleManager(private val context: Context) {
 }
 
 @SuppressLint("NewApi")
-private fun BluetoothDevice.displayName(): String =
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) alias ?: name ?: address
-    else name ?: address
+private fun BluetoothDevice.displayName(): String {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        val a = alias
+        if (a != null) return a
+    }
+    return name ?: address
+}

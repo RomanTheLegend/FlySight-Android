@@ -7,6 +7,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
+import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
@@ -23,6 +24,7 @@ class SettingsAdapter(private val allItems: List<SettingItem>) :
         val result = mutableListOf<SettingItem>()
         var currentExpanded = true
         for (item in allItems) {
+            if (item is SettingItem.AlLineList && item.isHidden) continue
             if (item is SettingItem.Section) {
                 currentExpanded = item.isExpanded
                 result.add(item)
@@ -33,18 +35,38 @@ class SettingsAdapter(private val allItems: List<SettingItem>) :
         return result
     }
 
+    fun setAlLineListVisible(item: SettingItem.AlLineList, visible: Boolean) {
+        if (item.isHidden == !visible) return
+        item.isHidden = !visible
+        val inDisplayed = displayedItems.indexOfFirst { it === item }
+        if (visible && inDisplayed == -1) {
+            val allIdx = allItems.indexOfFirst { it === item }
+            var insertPos = 0
+            for (i in allIdx - 1 downTo 0) {
+                val di = displayedItems.indexOfFirst { it === allItems[i] }
+                if (di >= 0) { insertPos = di + 1; break }
+            }
+            displayedItems.add(insertPos, item)
+            notifyItemInserted(insertPos)
+        } else if (!visible && inDisplayed >= 0) {
+            displayedItems.removeAt(inDisplayed)
+            notifyItemRemoved(inDisplayed)
+        }
+    }
+
     override fun getItemCount() = displayedItems.size
     override fun getItemViewType(pos: Int) = displayedItems[pos].viewType
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         val inf = LayoutInflater.from(parent.context)
         return when (viewType) {
-            SettingItem.VIEW_SECTION -> SectionVH(inf.inflate(R.layout.item_setting_section, parent, false))
-            SettingItem.VIEW_TOGGLE  -> ToggleVH(inf.inflate(R.layout.item_setting_toggle,  parent, false))
-            SettingItem.VIEW_CHOICE  -> ChoiceVH(inf.inflate(R.layout.item_setting_choice,  parent, false))
-            SettingItem.VIEW_COORD   -> CoordPickerVH(inf.inflate(R.layout.item_setting_coord,  parent, false))
-            SettingItem.VIEW_SLIDER  -> SliderVH(inf.inflate(R.layout.item_setting_slider,  parent, false))
-            else                     -> NumberVH(inf.inflate(R.layout.item_setting_number,   parent, false))
+            SettingItem.VIEW_SECTION  -> SectionVH(inf.inflate(R.layout.item_setting_section,   parent, false))
+            SettingItem.VIEW_TOGGLE   -> ToggleVH(inf.inflate(R.layout.item_setting_toggle,     parent, false))
+            SettingItem.VIEW_CHOICE   -> ChoiceVH(inf.inflate(R.layout.item_setting_choice,     parent, false))
+            SettingItem.VIEW_COORD    -> CoordPickerVH(inf.inflate(R.layout.item_setting_coord, parent, false))
+            SettingItem.VIEW_SLIDER   -> SliderVH(inf.inflate(R.layout.item_setting_slider,     parent, false))
+            SettingItem.VIEW_AL_LINES -> AlLineListVH(inf.inflate(R.layout.item_setting_al_lines, parent, false))
+            else                      -> NumberVH(inf.inflate(R.layout.item_setting_number,     parent, false))
         }
     }
 
@@ -56,6 +78,7 @@ class SettingsAdapter(private val allItems: List<SettingItem>) :
             is SettingItem.NumberInput -> (holder as NumberVH).bind(item)
             is SettingItem.CoordPicker -> (holder as CoordPickerVH).bind(item)
             is SettingItem.Slider      -> (holder as SliderVH).bind(item)
+            is SettingItem.AlLineList  -> (holder as AlLineListVH).bind(item)
         }
     }
 
@@ -81,7 +104,9 @@ class SettingsAdapter(private val allItems: List<SettingItem>) :
             val children = mutableListOf<SettingItem>()
             for (i in allSectionPos + 1 until allItems.size) {
                 if (allItems[i] is SettingItem.Section) break
-                children.add(allItems[i])
+                val child = allItems[i]
+                if (child is SettingItem.AlLineList && child.isHidden) continue
+                children.add(child)
             }
             if (children.isNotEmpty()) {
                 val insertPos = sectionPos + 1
@@ -132,6 +157,7 @@ class SettingsAdapter(private val allItems: List<SettingItem>) :
                     .setSingleChoiceItems(item.options.toTypedArray(), item.selectedIndex) { dialog, which ->
                         item.selectedIndex = which
                         tvValue.text = item.options[which]
+                        item.onChanged?.invoke(which)
                         dialog.dismiss()
                     }
                     .show()
@@ -211,6 +237,105 @@ class SettingsAdapter(private val allItems: List<SettingItem>) :
             val lon = lonRaw.toLongOrNull()?.let { it / 1e7 } ?: 0.0
             return if (lat == 0.0 && lon == 0.0) "Not set"
                    else "%.6f°,  %.6f°".format(lat, lon)
+        }
+    }
+
+    class AlLineListVH(view: View) : RecyclerView.ViewHolder(view) {
+        private val btnHint:        TextView    = view.findViewById(R.id.btnHint)
+        private val containerLines: LinearLayout = view.findViewById(R.id.containerLines)
+        private val btnAddLine:     TextView    = view.findViewById(R.id.btnAddLine)
+        private val btnRemoveLine:  TextView    = view.findViewById(R.id.btnRemoveLine)
+
+        fun bind(item: SettingItem.AlLineList) {
+            bindHint(btnHint, "Configure up to 4 data lines shown on ActiveLook glasses in Default Mode. At least one line is required.")
+            renderLines(item)
+            btnAddLine.setOnClickListener {
+                if (item.lines.size < 4) {
+                    item.lines.add(AlLine())
+                    renderLines(item)
+                    updateButtons(item)
+                }
+            }
+            btnRemoveLine.setOnClickListener {
+                if (item.lines.size > 1) {
+                    item.lines.removeAt(item.lines.size - 1)
+                    renderLines(item)
+                    updateButtons(item)
+                }
+            }
+            updateButtons(item)
+        }
+
+        private fun renderLines(item: SettingItem.AlLineList) {
+            containerLines.removeAllViews()
+            for ((index, line) in item.lines.withIndex()) {
+                val row = LayoutInflater.from(itemView.context)
+                    .inflate(R.layout.item_al_line_row, containerLines, false)
+                bindLineRow(row, index + 1, line)
+                containerLines.addView(row)
+            }
+        }
+
+        private fun bindLineRow(view: View, lineNum: Int, line: AlLine) {
+            view.findViewById<TextView>(R.id.tvLineNum).text = "Line $lineNum"
+
+            val tvMode = view.findViewById<TextView>(R.id.tvMode)
+            val modeIndex = SettingItem.AlLineList.modeVals.indexOf(line.mode.toString())
+            tvMode.text = SettingItem.AlLineList.modeOpts.getOrElse(modeIndex) { "Unknown" }
+            tvMode.setOnClickListener {
+                AlertDialog.Builder(view.context)
+                    .setTitle("Mode")
+                    .setSingleChoiceItems(
+                        SettingItem.AlLineList.modeOpts.toTypedArray(),
+                        modeIndex.coerceAtLeast(0)
+                    ) { dialog, which ->
+                        line.mode = SettingItem.AlLineList.modeVals[which].toInt()
+                        tvMode.text = SettingItem.AlLineList.modeOpts[which]
+                        dialog.dismiss()
+                    }
+                    .show()
+            }
+
+            val tvUnits = view.findViewById<TextView>(R.id.tvUnits)
+            tvUnits.text = if (line.units == 0) "km/h or m" else "mph or feet"
+            tvUnits.setOnClickListener {
+                AlertDialog.Builder(view.context)
+                    .setTitle("Units")
+                    .setSingleChoiceItems(
+                        arrayOf("km/h or m", "mph or feet"),
+                        line.units.coerceIn(0, 1)
+                    ) { dialog, which ->
+                        line.units = which
+                        tvUnits.text = if (which == 0) "km/h or m" else "mph or feet"
+                        dialog.dismiss()
+                    }
+                    .show()
+            }
+
+            val tvDec = view.findViewById<TextView>(R.id.tvDec)
+            tvDec.text = line.dec.toString()
+            tvDec.setOnClickListener {
+                AlertDialog.Builder(view.context)
+                    .setTitle("Decimal Places")
+                    .setSingleChoiceItems(
+                        arrayOf("0", "1", "2"),
+                        line.dec.coerceIn(0, 2)
+                    ) { dialog, which ->
+                        line.dec = which
+                        tvDec.text = which.toString()
+                        dialog.dismiss()
+                    }
+                    .show()
+            }
+        }
+
+        private fun updateButtons(item: SettingItem.AlLineList) {
+            val canAdd    = item.lines.size < 4
+            val canRemove = item.lines.size > 1
+            btnAddLine.isEnabled    = canAdd
+            btnAddLine.alpha        = if (canAdd) 1f else 0.35f
+            btnRemoveLine.isEnabled = canRemove
+            btnRemoveLine.alpha     = if (canRemove) 1f else 0.35f
         }
     }
 }

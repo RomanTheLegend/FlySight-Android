@@ -95,7 +95,8 @@ class ConfigActivity : AppCompatActivity() {
         super.onStop()
         if (settingsItems.isNotEmpty()) {
             val app = application as FlySightApp
-            app.cachedConfigText   = originalText
+            val serialized = ConfigSerializer.serialize(settingsItems, originalText)
+            app.cachedConfigText   = serialized
             app.cachedConfigValues = extractCurrentValues()
         }
     }
@@ -103,9 +104,8 @@ class ConfigActivity : AppCompatActivity() {
     private fun restoreFromCache(app: FlySightApp) {
         originalText  = app.cachedConfigText
         val settings  = app.cachedConfigValues ?: return
-        settingsItems = buildItems(settings)
-        settingsAdapter = SettingsAdapter(settingsItems)
-        binding.recyclerSettings.adapter = settingsAdapter
+        settingsItems = buildItems(settings, app.cachedConfigText)
+        attachAdapter()
         binding.recyclerSettings.visibility = View.VISIBLE
         binding.tvEmpty.visibility = View.GONE
         val label = if (originalText.isBlank()) "defaults" else "${settingsItems.count { it !is SettingItem.Section }} settings"
@@ -135,9 +135,8 @@ class ConfigActivity : AppCompatActivity() {
                 }
                 originalText = String(bytes, Charsets.UTF_8)
                 val settings = ConfigParser.parse(originalText)
-                settingsItems = buildItems(settings)
-                settingsAdapter = SettingsAdapter(settingsItems)
-                binding.recyclerSettings.adapter = settingsAdapter
+                settingsItems = buildItems(settings, originalText)
+                attachAdapter()
                 binding.recyclerSettings.visibility = View.VISIBLE
                 binding.tvEmpty.visibility = View.GONE
                 val label = if (originalText.isBlank()) "defaults" else "${settingsItems.count { it !is SettingItem.Section }} settings"
@@ -148,9 +147,8 @@ class ConfigActivity : AppCompatActivity() {
                 app.cachedConfigValues = settings
             } catch (e: java.io.FileNotFoundException) {
                 originalText  = ""
-                settingsItems = buildItems(emptyMap())
-                settingsAdapter = SettingsAdapter(settingsItems)
-                binding.recyclerSettings.adapter = settingsAdapter
+                settingsItems = buildItems(emptyMap(), "")
+                attachAdapter()
                 binding.recyclerSettings.visibility = View.VISIBLE
                 binding.tvEmpty.visibility = View.GONE
                 setStatus("No config found — showing defaults")
@@ -214,7 +212,8 @@ class ConfigActivity : AppCompatActivity() {
                     if (item.latRaw.isNotBlank()) map[item.latKey] = item.latRaw
                     if (item.lonRaw.isNotBlank()) map[item.lonKey] = item.lonRaw
                 }
-                is SettingItem.Section -> {}
+                is SettingItem.AlLineList  -> {}  // restored via cachedConfigText
+                is SettingItem.Section     -> {}
             }
         }
         return map
@@ -259,7 +258,19 @@ class ConfigActivity : AppCompatActivity() {
 
     private fun setStatus(text: String) { binding.tvStatus.text = text }
 
-    private fun buildItems(s: Map<String, String>): List<SettingItem> {
+    private fun attachAdapter() {
+        settingsAdapter = SettingsAdapter(settingsItems)
+        binding.recyclerSettings.adapter = settingsAdapter
+        val alMode  = settingsItems.filterIsInstance<SettingItem.Choice>().find { it.key == "AL_Mode" }
+        val alLines = settingsItems.filterIsInstance<SettingItem.AlLineList>().firstOrNull()
+        if (alMode != null && alLines != null) {
+            alMode.onChanged = { idx ->
+                settingsAdapter?.setAlLineListVisible(alLines, alMode.values.getOrNull(idx) == "1")
+            }
+        }
+    }
+
+    private fun buildItems(s: Map<String, String>, rawText: String = ""): List<SettingItem> {
         fun choice(key: String, label: String, opts: List<String>, vals: List<String>, hint: String? = null): SettingItem.Choice {
             val idx = vals.indexOf(s[key]).coerceAtLeast(0)
             return SettingItem.Choice(key, label, opts, vals, idx, hint = hint)
@@ -298,12 +309,6 @@ class ConfigActivity : AppCompatActivity() {
 
         val spModeOpts = modeOpts + listOf("Altitude above DZ")
         val spModeVals = modeVals + listOf("12")
-
-        val alLineOpts = listOf("Horizontal Speed", "Vertical Speed", "Glide Ratio",
-                                 "Inverse Glide Ratio", "Total Speed",
-                                 "Direction to Dest.", "Distance to Dest.",
-                                 "Direction to Bearing", "Dive Angle", "Altitude above DZ", "Course")
-        val alLineVals = listOf("0", "1", "2", "3", "4", "5", "6", "7", "11", "12", "13")
 
         val dzCoord = SettingItem.CoordPicker(
             "Lat", "Lon", "DZ Coordinates",
@@ -472,17 +477,14 @@ class ConfigActivity : AppCompatActivity() {
             add(SettingItem.Section("ActiveLook"))
             add(num("AL_ID", "Device ID", def = "0",
                 hint = "Bluetooth device ID of the ActiveLook glasses to pair with."))
-            add(choice("AL_Mode", "Mode",
+            val alMode = choice("AL_Mode", "Mode",
                 listOf("Not Active", "Default Mode", "Competition Mode"),
-                listOf("0", "1", "2")))
+                listOf("0", "1", "2"))
+            add(alMode)
             add(num("AL_Rate", "Rate", "ms", "1000"))
-            add(choice("AL_Line", "Line Value", alLineOpts, alLineVals,
-                hint = "Which measurement to display on the ActiveLook line."))
-            add(choice("AL_Units", "Units",
-                listOf("km/h or m", "mph or feet"), listOf("0", "1"),
-                hint = "Units for the ActiveLook display."))
-            add(slider("AL_Dec", "Decimal Places", 0, 2, 1,
-                hint = "Decimal places shown in the ActiveLook value."))
+            val alLines = SettingItem.AlLineList(ConfigParser.parseAlLines(rawText))
+            alLines.isHidden = alMode.values.getOrNull(alMode.selectedIndex) != "1"
+            add(alLines)
         }
     }
 }
